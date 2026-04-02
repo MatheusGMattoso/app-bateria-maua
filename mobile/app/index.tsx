@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { BASE_URL } from './../config/api';
 
 export default function RegisterScreen() {
   const [nome, setNome] = useState('');
@@ -22,7 +23,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      const respota = await fetch('http:// 172.20.10.2:3000/api/membros/registro', { // Substitua pelo IP da sua máquina
+      const respota = await fetch(`${BASE_URL}/membros/registro`, { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
