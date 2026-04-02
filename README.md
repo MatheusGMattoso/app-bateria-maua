@@ -29,6 +29,43 @@ A arquitetura foi selecionada para equilibrar desempenho, escalabilidade e custo
 ## 📖 Metodologia
 O desenvolvimento caracteriza-se como um estudo de natureza aplicada com abordagem experimental. A metodologia baseia-se em práticas de **metodologias ágeis**, permitindo ciclos iterativos e incrementais para validação contínua dos requisitos junto aos stakeholders.
 
+## ⚙️ Guia de Inicialização - Backend
+Este é o servidor Node.js responsável por gerenciar a API, a autenticação e a comunicação com o banco de dados relacional (Supabase) do aplicativo.
+
+### 📋 Pré-requisitos
+Antes de começar, você precisará ter instalado em sua máquina:
+* [Node.js](https://nodejs.org/)
+* Solicitar à equipe o arquivo `.env` contendo as credenciais de acesso ao banco de dados do projeto.
+
+### 🛠️ Como rodar o projeto localmente
+eu não p
+**1. Clone o repositório e acesse a pasta do backend:**
+```bash
+git clone https://github.com/MatheusGMattoso/app-bateria-maua.git
+cd app-bateria-maua/backend
+```
+
+**2. Instale as dependências:**
+```bash
+npm install
+```
+
+**3. Configure as Variáveis de Ambiente:**
+Crie um arquivo chamado `.env` na raiz da pasta `backend` (este arquivo é ignorado pelo Git por segurança). Cole as credenciais fornecidas pela equipe:
+```text
+PORT=3000
+SUPABASE_URL=url_fornecida_pela_equipe
+SUPABASE_KEY=chave_fornecida_pela_equipe
+```
+
+**4. Inicie o servidor:**
+```bash
+node index.js
+```
+O servidor estará rodando e pronto para receber requisições na porta configurada (padrão: `http://localhost:3000`).
+
+---
+
 ## 👥 Autores
 * MATHEUS GARCIA MATTOSO
 * MIGUEL GONÇALVES SAMPAIO NETO
