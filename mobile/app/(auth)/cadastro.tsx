@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { BASE_URL } from '../config/api';
+import { BASE_URL } from '../../config/api';
 import { useRouter } from 'expo-router';
 
 export default function RegisterScreen() {
