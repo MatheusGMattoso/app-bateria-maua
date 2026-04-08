@@ -71,7 +71,7 @@ export default function RegisterScreen() {
 
           <TextInput
             className="bg-manga-white h-[50px] rounded-lg px-4 mb-4 border border-[#ddd] text-base text-[#666]"
-            placeholder="E-mail ou RA"
+            placeholder="E-mail"
             placeholderTextColor="#666"
             value={email}
             onChangeText={setEmail}
