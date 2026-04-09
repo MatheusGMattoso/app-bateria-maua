@@ -38,6 +38,8 @@ export default function RegisterScreen() {
 
       if (respota.ok) {
         alert("Conta criada com sucesso!");
+        // Redireciona para o login após o cadastro dar certo!
+        router.push('/(auth)/login'); 
       } else {
         alert(dados.message || "Erro ao criar conta.");
       }
@@ -126,10 +128,10 @@ export default function RegisterScreen() {
 
           <TouchableOpacity 
             className="mt-5 items-center" 
-            onPress={() => router.push('/')}
+            onPress={() => router.push('/(auth)/login')}
           >
-            <Text className="text-manga-orangeDark text-sm font-semibold">
-              Já tem uma conta? Entre aqui.
+            <Text className="text-manga-gray text-sm font-semibold">
+              Já tem uma conta? <Text className="text-manga-orangeDark">Entre aqui.</Text>
             </Text>
           </TouchableOpacity>
         </View>
