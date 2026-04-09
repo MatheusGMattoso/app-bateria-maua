@@ -23,3 +23,40 @@ exports.registrarMembro = async (req, res) => {
     res.status(500).json({ message: 'Erro ao cadastrar membro.' });
   }
 };
+
+exports.login = async (req, res) => {
+  const { email, senha } = req.body;
+
+  if (!email || !senha) {
+    return res.status(400).json({ message: "Por favor, preencha e-mail e senha." });
+  }
+
+  try {
+    const { data: membro, error } = await supabase
+      .from('membros')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !membro) {
+      return res.status(401).json({ message: "E-mail não encontrado." });
+    }
+
+    const senhaValida = await bcrypt.compare(senha, membro.senha_hash);
+
+    if (!senhaValida) {
+      return res.status(401).json({ message: "Senha incorreta." });
+    }
+
+    delete membro.senha_hash;
+    
+    return res.status(200).json({ 
+      message: "Login realizado com sucesso!", 
+      usuario: membro 
+    });
+
+  } catch (error) {
+    console.error("Erro no login:", error);
+    return res.status(500).json({ message: "Erro interno no servidor." });
+  }
+};
