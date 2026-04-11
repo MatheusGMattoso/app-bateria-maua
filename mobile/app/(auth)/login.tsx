@@ -2,19 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BASE_URL } from '../../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   
-  // Novo estado para guardar mensagens de erro de forma silenciosa
   const [erro, setErro] = useState('');
 
   const router = useRouter();
 
   const handleLogin = async () => {
-    // Limpa qualquer erro anterior ao tentar logar de novo
     setErro('');
 
     if (!email || !senha) {
@@ -34,10 +33,9 @@ export default function LoginScreen() {
       const dados = await resposta.json();
 
       if (resposta.ok) {
-        // Sucesso absoluto! Zero alertas, apenas o redirecionamento instantâneo
+        await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
         router.replace('/(painel)'); 
       } else {
-        // Mostra o erro que veio da API (ex: "Senha incorreta") direto na tela
         setErro(dados.message || "Erro ao fazer login.");
       }
     } catch (error) {
@@ -92,7 +90,6 @@ export default function LoginScreen() {
             <Text className="text-manga-orangeDark text-sm font-semibold">Esqueceu a senha?</Text>
           </TouchableOpacity>
 
-          {/* Renderização condicional do erro: Só aparece se a variável 'erro' não estiver vazia */}
           {erro ? (
             <Text className="text-manga-red text-center mb-4 font-semibold">{erro}</Text>
           ) : null}
