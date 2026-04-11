@@ -34,7 +34,10 @@ export default function DashboardScreen() {
             <Text className="text-xs text-manga-gray text-center mt-1">Gestão da bateria</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center">
+          <TouchableOpacity 
+            className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center"
+            onPress={() => router.push('/(painel)/presenca')}
+          >
             <Text className="text-4xl mb-3">✅</Text>
             <Text className="text-manga-orangeDark font-bold text-lg">Presença</Text>
             <Text className="text-xs text-manga-gray text-center mt-1">Controle de ensaios</Text>
