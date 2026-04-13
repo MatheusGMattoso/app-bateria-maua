@@ -1,13 +1,17 @@
+// Arquivo: mobile/app/(painel)/presenca.tsx
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../../config/api';
 
 export default function PresencaScreen() {
   const [permissao, solicitarPermissao] = useCameraPermissions();
   const [escaneando, setEscaneando] = useState(false);
   const [perfil, setPerfil] = useState('Membro');
+  const [usuarioId, setUsuarioId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -16,21 +20,49 @@ export default function PresencaScreen() {
       if (usuarioStorage) {
         const usuario = JSON.parse(usuarioStorage);
         setPerfil(usuario.perfil_acesso);
+        setUsuarioId(usuario.id);
       }
     };
     carregarUsuario();
   }, []);
 
-  const lidarComQrCodeLido = ({ data }: { data: string }) => {
+  const lidarComQrCodeLido = async ({ data }: { data: string }) => {
     setEscaneando(false);
-    alert(`QR Code lido: ${data}`);
+    
+    if (!usuarioId) {
+      Alert.alert("Erro", "Usuário não identificado. Faça login novamente.");
+      return;
+    }
+
+    try {
+      const resposta = await fetch(`${BASE_URL}/presencas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          codigo_qr: data,
+          membro_id: usuarioId
+        })
+      });
+
+      const json = await resposta.json();
+
+      if (!resposta.ok) {
+        throw new Error(json.erro || "Erro ao registrar presença.");
+      }
+
+      Alert.alert("Sucesso!", "Presença confirmada no banco de dados.");
+    } catch (error: any) {
+      Alert.alert("Erro", error.message);
+    }
   };
 
   const iniciarLeitura = async () => {
     if (!permissao?.granted) {
       const resultado = await solicitarPermissao();
       if (!resultado.granted) {
-        alert("É necessário permitir o uso da câmera para ler o QR Code.");
+        Alert.alert("Erro", "É necessário permitir o uso da câmera para ler o QR Code.");
         return;
       }
     }
