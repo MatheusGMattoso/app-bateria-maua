@@ -5,11 +5,9 @@ exports.registrarMembro = async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
 
-    //Criptografar a senha
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash(senha, salt);
 
-    //Inserir no banco de dados (padrão visitante)
     const { data, error } = await supabase
       .from('membros')
       .insert([{ nome, email, senha_hash }])
