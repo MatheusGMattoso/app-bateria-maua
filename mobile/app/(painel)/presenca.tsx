@@ -1,6 +1,6 @@
 // Arquivo: mobile/app/(painel)/presenca.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ export default function PresencaScreen() {
   const [escaneando, setEscaneando] = useState(false);
   const [perfil, setPerfil] = useState('Membro');
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
+  const jaLeuRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -26,9 +27,30 @@ export default function PresencaScreen() {
     carregarUsuario();
   }, []);
 
-  const lidarComQrCodeLido = async ({ data }: { data: string }) => {
+  const lidarComQrCodeLido = ({ data }: { data: string }) => {
+    if (jaLeuRef.current) return;
+
+    jaLeuRef.current = true;
     setEscaneando(false);
     
+    Alert.alert(
+      "Confirmar Presença",
+      "Deseja registrar sua presença neste ensaio?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+          onPress: () => { jaLeuRef.current = false; }
+        },
+        {
+          text: "Sim, Confirmar",
+          onPress: () => confirmarPresencaNoBanco(data)
+        }
+      ]
+    );
+  };
+
+  const confirmarPresencaNoBanco = async (codigo_qr: string) => {
     if (!usuarioId) {
       Alert.alert("Erro", "Usuário não identificado. Faça login novamente.");
       return;
@@ -41,7 +63,7 @@ export default function PresencaScreen() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          codigo_qr: data,
+          codigo_qr: codigo_qr,
           membro_id: usuarioId
         })
       });
@@ -52,7 +74,7 @@ export default function PresencaScreen() {
         throw new Error(json.erro || "Erro ao registrar presença.");
       }
 
-      Alert.alert("Sucesso!", "Presença confirmada no banco de dados.");
+      Alert.alert("Sucesso!", "Sua presença foi confirmada neste ensaio!");
     } catch (error: any) {
       Alert.alert("Erro", error.message);
     }
@@ -66,6 +88,7 @@ export default function PresencaScreen() {
         return;
       }
     }
+    jaLeuRef.current = false;
     setEscaneando(true);
   };
 
@@ -80,7 +103,10 @@ export default function PresencaScreen() {
         />
         <TouchableOpacity 
           className="absolute bottom-10 self-center bg-manga-white px-6 py-3 rounded-full"
-          onPress={() => setEscaneando(false)}
+          onPress={() => {
+            setEscaneando(false);
+            jaLeuRef.current = false;
+          }}
         >
           <Text className="text-manga-red font-bold">Cancelar</Text>
         </TouchableOpacity>
