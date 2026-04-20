@@ -45,3 +45,34 @@ exports.registrarPresenca = async (req, res) => {
     res.status(500).json({ erro: error.message });
   }
 };
+
+exports.obterResumo = async (req, res) => {
+  try {
+    const { membro_id } = req.params;
+
+    const { count: totalEnsaios, error: erroEnsaios } = await supabase
+      .from('ensaios')
+      .select('*', { count: 'exact', head: true });
+
+    if (erroEnsaios) throw erroEnsaios;
+
+    const { count: totalPresencas, error: erroPresencas } = await supabase
+      .from('presencas')
+      .select('*', { count: 'exact', head: true })
+      .eq('membro_id', membro_id);
+
+    if (erroPresencas) throw erroPresencas;
+
+    const faltas = totalEnsaios - totalPresencas;
+    const frequencia = totalEnsaios > 0 ? Math.round((totalPresencas / totalEnsaios) * 100) : 0;
+
+    res.status(200).json({
+      presencas: totalPresencas || 0,
+      faltas: faltas >= 0 ? faltas : 0, 
+      frequencia: frequencia
+    });
+
+  } catch (error) {
+    res.status(500).json({ erro: error.message });
+  }
+};

@@ -12,8 +12,21 @@ export default function PresencaScreen() {
   const [escaneando, setEscaneando] = useState(false);
   const [perfil, setPerfil] = useState('Membro');
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
+  const [resumo, setResumo] = useState({ presencas: 0, faltas: 0, frequencia: 0 });
   const jaLeuRef = useRef(false);
   const router = useRouter();
+
+  const carregarResumo = async (id: string) => {
+    try {
+      const resposta = await fetch(`${BASE_URL}/presencas/resumo/${id}`);
+      if (resposta.ok) {
+        const dados = await resposta.json();
+        setResumo(dados);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar resumo:", error);
+    }
+  }
 
   useEffect(() => {
     const carregarUsuario = async () => {
@@ -22,6 +35,7 @@ export default function PresencaScreen() {
         const usuario = JSON.parse(usuarioStorage);
         setPerfil(usuario.perfil_acesso);
         setUsuarioId(usuario.id);
+        carregarResumo(usuario.id);
       }
     };
     carregarUsuario();
@@ -75,6 +89,7 @@ export default function PresencaScreen() {
       }
 
       Alert.alert("Sucesso!", "Sua presença foi confirmada neste ensaio!");
+      carregarResumo(usuarioId);
     } catch (error: any) {
       Alert.alert("Erro", error.message);
     }
@@ -125,15 +140,15 @@ export default function PresencaScreen() {
 
         <View className="flex-row justify-between mb-8">
           <View className="bg-manga-white w-[31%] p-4 rounded-xl shadow-sm border border-[#ddd] items-center">
-            <Text className="text-2xl font-bold text-manga-green">12</Text>
+            <Text className="text-2xl font-bold text-manga-green">{resumo.presencas}</Text>
             <Text className="text-xs text-manga-gray text-center mt-1">Presenças</Text>
           </View>
           <View className="bg-manga-white w-[31%] p-4 rounded-xl shadow-sm border border-[#ddd] items-center">
-            <Text className="text-2xl font-bold text-manga-red">2</Text>
+            <Text className="text-2xl font-bold text-manga-red">{resumo.faltas}</Text>
             <Text className="text-xs text-manga-gray text-center mt-1">Faltas</Text>
           </View>
           <View className="bg-manga-white w-[31%] p-4 rounded-xl shadow-sm border border-[#ddd] items-center">
-            <Text className="text-2xl font-bold text-manga-orangeDark">85%</Text>
+            <Text className="text-2xl font-bold text-manga-orangeDark">{resumo.frequencia}%</Text>
             <Text className="text-xs text-manga-gray text-center mt-1">Frequência</Text>
           </View>
         </View>
