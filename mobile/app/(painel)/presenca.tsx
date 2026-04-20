@@ -1,7 +1,7 @@
-// Arquivo: mobile/app/(painel)/presenca.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet, Alert, Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +27,28 @@ export default function PresencaScreen() {
       console.error("Erro ao carregar resumo:", error);
     }
   }
+
+  const baixarRelatorioPAE = async () => {
+    const url = `${BASE_URL}/presencas/relatorio/aprovados`;
+
+    try {
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        const fileUri = `${FileSystem.documentDirectory}horas_pae_aprovados.csv`; 
+        const downloadResult = await FileSystem.downloadAsync(url, fileUri);
+        
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri);
+        } else {
+          Alert.alert("Aviso", "O compartilhamento não está disponível neste dispositivo.");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao baixar o relatório:", error);
+      Alert.alert("Erro", "Não foi possível gerar a planilha de horas PAE.");
+    }
+  };
 
   useEffect(() => {
     const carregarUsuario = async () => {
@@ -170,6 +192,15 @@ export default function PresencaScreen() {
             onPress={() => router.push('/(painel)/gerar-qrcode')}
           >
             <Text className="text-manga-orangeDark text-lg font-bold">⚙️ Gerar QR Code (Diretoria)</Text>
+          </TouchableOpacity>
+        )}
+
+        {(perfil === 'Gestor de Módulo' || perfil === 'Administrador') && (
+          <TouchableOpacity 
+            className="bg-manga-green p-5 rounded-xl items-center justify-center mt-4 shadow-sm"
+            onPress={baixarRelatorioPAE}
+          >
+            <Text className="text-manga-white text-lg font-bold">📄 Exportar Horas PAE</Text>
           </TouchableOpacity>
         )}
 

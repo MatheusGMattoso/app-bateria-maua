@@ -50,27 +50,107 @@ exports.obterResumo = async (req, res) => {
   try {
     const { membro_id } = req.params;
 
-    const { count: totalEnsaios, error: erroEnsaios } = await supabase
+    const { data: ensaios, error: erroEnsaios } = await supabase
       .from('ensaios')
-      .select('*', { count: 'exact', head: true });
+      .select('id, peso, categoria');
 
     if (erroEnsaios) throw erroEnsaios;
 
-    const { count: totalPresencas, error: erroPresencas } = await supabase
+    const totalPontosPossiveis = ensaios
+      .filter(e => e.categoria === 'ensaio')
+      .reduce((soma, e) => soma + (e.peso || 1), 0);
+
+    const { data: presencas, error: erroPresencas } = await supabase
       .from('presencas')
-      .select('*', { count: 'exact', head: true })
+      .select('id, ensaios(peso, categoria)')
       .eq('membro_id', membro_id);
 
     if (erroPresencas) throw erroPresencas;
 
-    const faltas = totalEnsaios - totalPresencas;
-    const frequencia = totalEnsaios > 0 ? Math.round((totalPresencas / totalEnsaios) * 100) : 0;
+    let pontosObtidos = 0;
+    let comparecimentos = presencas.length;
+
+    presencas.forEach(p => {
+      if (p.ensaios) pontosObtidos += (p.ensaios.peso || 1);
+    });
+
+    const qtdeEnsaiosTotais = ensaios.filter(e => e.categoria === 'ensaio').length;
+    const qtdeEnsaiosComparecidos = presencas.filter(p => p.ensaios?.categoria === 'ensaio').length;
+    const faltas = qtdeEnsaiosTotais - qtdeEnsaiosComparecidos;
+
+    let frequencia = totalPontosPossiveis > 0 
+      ? Math.round((pontosObtidos / totalPontosPossiveis) * 100) 
+      : 0;
+    
+    if (frequencia > 100) frequencia = 100;
 
     res.status(200).json({
-      presencas: totalPresencas || 0,
+      presencas: comparecimentos, 
       faltas: faltas >= 0 ? faltas : 0, 
       frequencia: frequencia
     });
+
+  } catch (error) {
+    res.status(500).json({ erro: error.message });
+  }
+};
+
+exports.gerarRelatorioAprovados = async (req, res) => {
+  try {
+    const { data: ensaios, error: erroEnsaios } = await supabase
+      .from('ensaios')
+      .select('id, peso, categoria');
+
+    if (erroEnsaios) throw erroEnsaios;
+
+    const totalPontosPossiveis = ensaios
+      .filter(e => e.categoria === 'ensaio')
+      .reduce((soma, e) => soma + (e.peso || 1), 0);
+
+    if (totalPontosPossiveis === 0) {
+      return res.status(400).json({ erro: 'Nenhum ensaio registrado para base de cálculo.' });
+    }
+
+    const { data: membros, error: erroMembros } = await supabase
+      .from('membros')
+      .select('id, nome');
+
+    if (erroMembros) throw erroMembros;
+
+    const { data: presencas, error: erroPresencas } = await supabase
+      .from('presencas')
+      .select('membro_id, ensaios(peso, categoria)');
+
+    if (erroPresencas) throw erroPresencas;
+
+    const aprovados = [];
+
+    membros.forEach(membro => {
+      const presencasDoMembro = presencas.filter(p => p.membro_id === membro.id);
+      
+      const pontosObtidos = presencasDoMembro.reduce((soma, p) => soma + (p.ensaios?.peso || 1), 0);
+      
+      let frequencia = (pontosObtidos / totalPontosPossiveis) * 100;
+      let frequenciaFinal = frequencia > 100 ? 100 : Math.round(frequencia);
+
+      if (frequenciaFinal >= 70) {
+        aprovados.push({
+          nome: membro.nome,
+          pontos: pontosObtidos,
+          frequencia: frequenciaFinal
+        });
+      }
+    });
+
+    let csv = 'Nome,Pontos,Frequencia (%)\n'; 
+    
+    aprovados.forEach(linha => {
+      csv += `${linha.nome},${linha.pontos},${linha.frequencia}%\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=horas_pae_aprovados.csv');
+    res.status(200).send(csv);
 
   } catch (error) {
     res.status(500).json({ erro: error.message });

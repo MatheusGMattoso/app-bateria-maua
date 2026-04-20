@@ -9,8 +9,16 @@ export default function GerarQrCodeScreen() {
   
   const [etapa, setEtapa] = useState(1);
   const [dataEnsaio, setDataEnsaio] = useState('');
-  const [tipoEnsaio, setTipoEnsaio] = useState('Geral');
   const [valorQrCode, setValorQrCode] = useState('');
+
+  const opcoesEvento = [
+    { titulo: 'Ensaio de Quarta', sub: 'Escolinha (1 Ponto)', peso: 1, categoria: 'ensaio' },
+    { titulo: 'Ensaio de Sábado', sub: 'Fim de semana (2 Pontos)', peso: 2, categoria: 'ensaio' },
+    { titulo: 'Evento Menor', sub: 'Bônus (2 Pontos)', peso: 2, categoria: 'evento' },
+    { titulo: 'Evento Importante', sub: 'Dia de Semana / Grande porte (3 Pontos)', peso: 3, categoria: 'evento' },
+  ];
+
+  const [selecao, setSelecao] = useState(opcoesEvento[0]);
 
   const formatarData = (texto: string) => {
     const num = texto.replace(/\D/g, '');
@@ -21,12 +29,11 @@ export default function GerarQrCodeScreen() {
   };
 
   const handleGerarQrCode = async () => {
-    if (!dataEnsaio || !tipoEnsaio) {
-      Alert.alert("Erro", "Preencha todos os campos do ensaio.");
+    if (!dataEnsaio) {
+      Alert.alert("Erro", "Preencha a data do ensaio.");
       return;
     }
 
-    console.log("Enviando data:", dataEnsaio);
     try {
       const resposta = await fetch(`${BASE_URL}/ensaios`, {
         method: 'POST',
@@ -35,7 +42,9 @@ export default function GerarQrCodeScreen() {
         },
         body: JSON.stringify({
           data_ensaio: dataEnsaio,
-          tipo: tipoEnsaio
+          tipo: selecao.titulo,
+          peso: selecao.peso,
+          categoria: selecao.categoria
         })
       });
 
@@ -45,7 +54,7 @@ export default function GerarQrCodeScreen() {
         throw new Error(dados.erro || "Erro ao criar ensaio no banco");
       }
 
-      setValorQrCode(dados.ensaio.codigo_qr);
+      setValorQrCode(dados.codigo_qr || dados.ensaio?.codigo_qr);
       setEtapa(2);
     } catch (error) {
       console.log(error);
@@ -64,12 +73,12 @@ export default function GerarQrCodeScreen() {
                 Novo Ensaio
               </Text>
               <Text className="text-base text-manga-gray text-center mb-8">
-                Preencha os dados para gerar o código de presença.
+                Preencha os dados e o peso para gerar o código.
               </Text>
 
               <Text className="text-[#333] font-bold mb-2 ml-1">Data do Ensaio (DD/MM/AAAA)</Text>
               <TextInput
-                className="bg-manga-white h-[50px] rounded-lg px-4 mb-4 border border-[#ddd] text-base text-[#666]"
+                className="bg-manga-white h-[50px] rounded-lg px-4 mb-6 border border-[#ddd] text-base text-[#666]"
                 placeholder="Ex: 12/04/2026"
                 placeholderTextColor="#999"
                 value={dataEnsaio}
@@ -78,14 +87,32 @@ export default function GerarQrCodeScreen() {
                 maxLength={10}
               />
 
-              <Text className="text-[#333] font-bold mb-2 ml-1">Tipo de Ensaio</Text>
-              <TextInput
-                className="bg-manga-white h-[50px] rounded-lg px-4 mb-8 border border-[#ddd] text-base text-[#666]"
-                placeholder="Ex: Geral, Naipe de Caixas, Apresentação"
-                placeholderTextColor="#999"
-                value={tipoEnsaio}
-                onChangeText={setTipoEnsaio}
-              />
+              <Text className="text-[#333] font-bold mb-2 ml-1">Categoria do Evento</Text>
+              <View className="mb-6">
+                {opcoesEvento.map((opcao, index) => {
+                  const selecionado = selecao.titulo === opcao.titulo;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => setSelecao(opcao)}
+                      className={`p-4 rounded-xl mb-3 border-2 flex-row justify-between items-center ${
+                        selecionado ? 'border-manga-orangeDark bg-orange-50' : 'border-[#ddd] bg-manga-white'
+                      }`}
+                    >
+                      <View>
+                        <Text className={`text-base font-bold ${selecionado ? 'text-manga-orangeDark' : 'text-[#333]'}`}>
+                          {opcao.titulo}
+                        </Text>
+                        <Text className="text-xs text-manga-gray mt-1">{opcao.sub}</Text>
+                      </View>
+                      {selecionado && (
+                        <View className="h-4 w-4 rounded-full bg-manga-orangeDark" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               <TouchableOpacity 
                 className="bg-manga-orangeDark h-[55px] rounded-xl justify-center items-center shadow-sm mb-4"
