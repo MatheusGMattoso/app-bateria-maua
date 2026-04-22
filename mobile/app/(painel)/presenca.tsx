@@ -69,26 +69,43 @@ export default function PresencaScreen() {
     jaLeuRef.current = true;
     setEscaneando(false);
     
-    Alert.alert(
-      "Confirmar Presença",
-      "Deseja registrar sua presença neste ensaio?",
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-          onPress: () => { jaLeuRef.current = false; }
-        },
-        {
-          text: "Sim, Confirmar",
-          onPress: () => confirmarPresencaNoBanco(data)
-        }
-      ]
-    );
+    const titulo = "Confirmar Presença";
+    const mensagem = "Deseja registrar sua presença neste ensaio?";
+
+    if (Platform.OS === 'web') {
+      const confirmou = window.confirm(`${titulo}\n\n${mensagem}`);
+      if (confirmou) {
+        confirmarPresencaNoBanco(data);
+      } else {
+        jaLeuRef.current = false;
+      }
+    } else {
+      Alert.alert(
+        titulo,
+        mensagem,
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+            onPress: () => { jaLeuRef.current = false; }
+          },
+          {
+            text: "Sim, Confirmar",
+            onPress: () => confirmarPresencaNoBanco(data)
+          }
+        ]
+      );
+    }
   };
 
   const confirmarPresencaNoBanco = async (codigo_qr: string) => {
     if (!usuarioId) {
-      Alert.alert("Erro", "Usuário não identificado. Faça login novamente.");
+      const msgErroUsuario = "Usuário não identificado. Faça login novamente.";
+      if (Platform.OS === 'web') {
+        window.alert(`Erro: ${msgErroUsuario}`);
+      } else {
+        Alert.alert("Erro", msgErroUsuario);
+      }
       return;
     }
 
@@ -110,10 +127,23 @@ export default function PresencaScreen() {
         throw new Error(json.erro || "Erro ao registrar presença.");
       }
 
-      Alert.alert("Sucesso!", "Sua presença foi confirmada neste ensaio!");
+      const msgSucesso = "Sua presença foi confirmada neste ensaio!";
+      if (Platform.OS === 'web') {
+        window.alert(`Sucesso! ${msgSucesso}`);
+      } else {
+        Alert.alert("Sucesso!", msgSucesso);
+      }
+
       carregarResumo(usuarioId);
+
     } catch (error: any) {
-      Alert.alert("Erro", error.message);
+      if (Platform.OS === 'web') {
+        window.alert("Erro: " + error.message);
+      } else {
+        Alert.alert("Erro", error.message);
+      }
+      
+      jaLeuRef.current = false;
     }
   };
 
