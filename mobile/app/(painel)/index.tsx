@@ -43,10 +43,13 @@ export default function DashboardScreen() {
             <Text className="text-xs text-manga-gray text-center mt-1">Controle de ensaios</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center">
+          <TouchableOpacity
+            className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center"
+            onPress={() => router.push('/(painel)/calendario')}
+          >
             <Text className="text-4xl mb-3">📅</Text>
-            <Text className="text-manga-orangeDark font-bold text-lg">Eventos</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Próximos shows</Text>
+            <Text className="text-manga-orangeDark font-bold text-lg">Calendário</Text>
+            <Text className="text-xs text-manga-gray text-center mt-1">Eventos do ano</Text>
           </TouchableOpacity>
 
           <TouchableOpacity className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center">
