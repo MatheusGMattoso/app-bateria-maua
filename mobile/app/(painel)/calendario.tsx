@@ -16,6 +16,7 @@ type Evento = {
   titulo: string;
   descricao?: string | null;
   data_evento: string;
+  horario_evento?: string | null;
   criado_por?: string | null;
 };
 
@@ -43,6 +44,12 @@ function formatDateKey(date: Date) {
   return `${ano}-${mes}-${dia}`;
 }
 
+function formatTimeKey(date: Date) {
+  const hora = `${date.getHours()}`.padStart(2, '0');
+  const minuto = `${date.getMinutes()}`.padStart(2, '0');
+  return `${hora}:${minuto}`;
+}
+
 export default function CalendarioScreen() {
   const hoje = new Date();
   const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
@@ -54,6 +61,7 @@ export default function CalendarioScreen() {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [dataEvento, setDataEvento] = useState(formatDateKey(hoje));
+  const [horarioEvento, setHorarioEvento] = useState(formatTimeKey(hoje));
 
   const ehAdministrador =
     usuario?.perfil_acesso === 'Administrador' || usuario?.perfil_acesso === 'Gestor de Módulo';
@@ -93,8 +101,13 @@ export default function CalendarioScreen() {
   };
 
   const agendarEvento = async () => {
-    if (!titulo || !dataEvento) {
-      Alert.alert('Campos obrigatorios', 'Preencha titulo e data do evento.');
+    if (!titulo || !dataEvento || !horarioEvento) {
+      Alert.alert('Campos obrigatorios', 'Preencha titulo, data e horario do evento.');
+      return;
+    }
+
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(horarioEvento)) {
+      Alert.alert('Horario invalido', 'Use o formato HH:MM (ex: 19:30).');
       return;
     }
 
@@ -106,6 +119,7 @@ export default function CalendarioScreen() {
           titulo,
           descricao,
           data_evento: dataEvento,
+          horario_evento: horarioEvento,
           criado_por: usuario?.id || null,
           perfil_acesso: usuario?.perfil_acesso,
         }),
@@ -121,6 +135,7 @@ export default function CalendarioScreen() {
       setTitulo('');
       setDescricao('');
       setDataEvento(formatDateKey(new Date()));
+      setHorarioEvento(formatTimeKey(new Date()));
       buscarEventos();
     } catch (error: any) {
       Alert.alert('Erro', error.message);
@@ -234,6 +249,9 @@ export default function CalendarioScreen() {
             eventosDoDia.map((evento, index) => (
               <View key={`${evento.id || evento.titulo}-${index}`} className="bg-manga-white p-4 rounded-xl border border-[#ddd] mb-3">
                 <Text className="font-bold text-[#333]">{evento.titulo}</Text>
+                <Text className="text-sm text-manga-gray mt-1">
+                  {evento.data_evento} {evento.horario_evento ? `as ${evento.horario_evento}` : ''}
+                </Text>
                 {evento.descricao ? <Text className="text-sm text-manga-gray mt-1">{evento.descricao}</Text> : null}
               </View>
             ))
@@ -254,6 +272,12 @@ export default function CalendarioScreen() {
               placeholder="Data (AAAA-MM-DD)"
               value={dataEvento}
               onChangeText={setDataEvento}
+            />
+            <TextInput
+              className="bg-[#f5f5f5] h-[46px] rounded-lg px-4 mb-3 border border-[#ddd] text-[#333]"
+              placeholder="Horario (HH:MM)"
+              value={horarioEvento}
+              onChangeText={setHorarioEvento}
             />
             <TextInput
               className="bg-[#f5f5f5] rounded-lg px-4 py-3 mb-3 border border-[#ddd] text-[#333]"

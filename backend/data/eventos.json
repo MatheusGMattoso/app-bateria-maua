@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "local_1777415361997",
+    "titulo": "Ensaio",
+    "descricao": "Compareçam todos",
+    "data_evento": "2026-04-29",
+    "horario_evento": "12:30",
+    "criado_por": "06355e7c-7794-44f1-8a35-34ec9d80b9e3"
+  }
+]

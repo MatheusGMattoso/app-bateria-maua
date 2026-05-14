@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 
 // Mude para 'true' para o app usar o servidor na nuvem (Render)
 // Mude para 'false' para o app usar o seu notebook (Desenvolvimento Local)
-const USAR_NUVEM = true;
+const USAR_NUVEM = false;
 
 const URL_PRODUCAO = 'https://app-bateria-maua.onrender.com/api';
 
