@@ -35,7 +35,7 @@ const NOMES_MESES = [
   'Dezembro',
 ];
 
-const NOMES_DIAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const NOMES_DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 function formatDateKey(date: Date) {
   const ano = date.getFullYear();
@@ -204,8 +204,8 @@ export default function CalendarioScreen() {
           </View>
 
           <View className="flex-row justify-between mb-2">
-            {NOMES_DIAS.map((dia) => (
-              <Text key={dia} className="w-[13%] text-center text-manga-gray font-bold text-xs">
+            {NOMES_DIAS.map((dia, index) => (
+              <Text key={`dia-semana-${index}`} className="w-[13%] text-center text-manga-gray font-bold text-xs">
                 {dia}
               </Text>
             ))}
