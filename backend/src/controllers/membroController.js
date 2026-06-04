@@ -22,6 +22,22 @@ exports.registrarMembro = async (req, res) => {
   }
 };
 
+exports.listarMembros = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('membros')
+      .select('id, nome, email, perfil_acesso, created_at')
+      .order('nome', { ascending: true });
+
+    if (error) throw error;
+
+    res.status(200).json({ membros: data || [] });
+  } catch (error) {
+    console.error('Erro ao listar membros:', error);
+    res.status(500).json({ message: 'Erro ao listar membros.' });
+  }
+};
+
 exports.login = async (req, res) => {
   const { email, senha } = req.body;
 
