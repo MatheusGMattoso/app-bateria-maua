@@ -1,13 +1,5 @@
 [
   {
-    "id": "local_1779145455844",
-    "titulo": "Ensaio",
-    "descricao": "Qq coisa",
-    "data_evento": "2026-05-19",
-    "horario_evento": "20:03",
-    "criado_por": "fc584a7c-aa5a-44e6-bade-7bb54ac5f124"
-  },
-  {
     "id": "local_1779144920263",
     "titulo": "Teste persistencia DB",
     "descricao": "Verificacao automatica",
