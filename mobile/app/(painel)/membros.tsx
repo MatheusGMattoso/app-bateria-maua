@@ -19,8 +19,9 @@ type Membro = {
   nome: string;
   email: string;
   perfil_acesso: string;
-  created_at: string;
 };
+
+const PERFIS_DISPONIVEIS = ['Administrador', 'Gestor de Módulo', 'Membro'] as const;
 
 const PERFIL_COR: Record<string, { bg: string; text: string; label: string }> = {
   Administrador: { bg: 'bg-[#fdecea]', text: 'text-[#d32f2f]', label: 'Administrador' },
@@ -37,11 +38,6 @@ function obterIniciais(nome: string) {
     .join('');
 }
 
-function formatarData(dataStr: string) {
-  const data = new Date(dataStr);
-  return `${data.getDate().toString().padStart(2, '0')}/${(data.getMonth() + 1).toString().padStart(2, '0')}/${data.getFullYear()}`;
-}
-
 export default function MembrosScreen() {
   const router = useRouter();
   const [membros, setMembros] = useState<Membro[]>([]);
@@ -50,6 +46,9 @@ export default function MembrosScreen() {
   const [busca, setBusca] = useState('');
   const [filtroAtivo, setFiltroAtivo] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<any>(null);
+  const [atualizandoId, setAtualizandoId] = useState<string | null>(null);
+
+  const ehAdministrador = usuario?.perfil_acesso === 'Administrador';
 
   useEffect(() => {
     const carregarUsuario = async () => {
@@ -87,12 +86,73 @@ export default function MembrosScreen() {
     setRefreshing(false);
   };
 
+  const atualizarPerfil = async (membro: Membro, novoPerfil: string) => {
+    if (!ehAdministrador || !usuario?.id) return;
+
+    const perfilAtual = membro.perfil_acesso || 'Membro';
+    if (perfilAtual === novoPerfil) {
+      Alert.alert('Perfil inalterado', `${membro.nome} ja possui este perfil.`);
+      return;
+    }
+
+    try {
+      setAtualizandoId(membro.id);
+      const resposta = await fetch(`${BASE_URL}/membros/${membro.id}/perfil`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          perfil_acesso: novoPerfil,
+          solicitante_id: usuario.id,
+        }),
+      });
+
+      const dados = await resposta.json();
+
+      if (!resposta.ok) {
+        throw new Error(dados.message || 'Erro ao atualizar perfil.');
+      }
+
+      setMembros((lista) =>
+        lista.map((m) => (m.id === membro.id ? { ...m, perfil_acesso: novoPerfil } : m))
+      );
+
+      if (usuario.id === membro.id) {
+        const usuarioAtualizado = { ...usuario, perfil_acesso: novoPerfil };
+        setUsuario(usuarioAtualizado);
+        await AsyncStorage.setItem('usuario', JSON.stringify(usuarioAtualizado));
+      }
+
+      Alert.alert('Sucesso', `Perfil de ${membro.nome} alterado para ${PERFIL_COR[novoPerfil]?.label || novoPerfil}.`);
+    } catch (error: any) {
+      Alert.alert('Erro', error.message);
+    } finally {
+      setAtualizandoId(null);
+    }
+  };
+
+  const abrirAlteracaoPerfil = (membro: Membro) => {
+    if (!ehAdministrador) return;
+
+    Alert.alert(
+      'Alterar perfil',
+      `Selecione o novo perfil para ${membro.nome}:`,
+      [
+        ...PERFIS_DISPONIVEIS.map((perfil) => ({
+          text: PERFIL_COR[perfil].label,
+          onPress: () => atualizarPerfil(membro, perfil),
+        })),
+        { text: 'Cancelar', style: 'cancel' as const },
+      ]
+    );
+  };
+
   const membrosFiltrados = membros.filter((m) => {
+    const perfil = m.perfil_acesso || 'Membro';
     const buscaMatch =
       !busca ||
       m.nome.toLowerCase().includes(busca.toLowerCase()) ||
       m.email.toLowerCase().includes(busca.toLowerCase());
-    const filtroMatch = !filtroAtivo || m.perfil_acesso === filtroAtivo;
+    const filtroMatch = !filtroAtivo || perfil === filtroAtivo;
     return buscaMatch && filtroMatch;
   });
 
@@ -100,7 +160,7 @@ export default function MembrosScreen() {
     total: membros.length,
     Administrador: membros.filter((m) => m.perfil_acesso === 'Administrador').length,
     'Gestor de Módulo': membros.filter((m) => m.perfil_acesso === 'Gestor de Módulo').length,
-    Membro: membros.filter((m) => m.perfil_acesso === 'Membro').length,
+    Membro: membros.filter((m) => !m.perfil_acesso || m.perfil_acesso === 'Membro').length,
   };
 
   const filtros = [
@@ -127,6 +187,11 @@ export default function MembrosScreen() {
           <Text className="text-sm text-manga-gray font-semibold ml-7">
             Gestao dos integrantes da bateria.
           </Text>
+          {ehAdministrador && (
+            <Text className="text-xs text-manga-orangeDark font-semibold ml-7 mt-1">
+              Toque no avatar de um membro para alterar o perfil.
+            </Text>
+          )}
         </View>
 
         <View className="flex-row bg-manga-white rounded-2xl border border-[#e0e0e0] p-4 mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 }}>
@@ -206,7 +271,7 @@ export default function MembrosScreen() {
               {membrosFiltrados.length} resultado{membrosFiltrados.length !== 1 ? 's' : ''}
             </Text>
             {membrosFiltrados.map((membro) => {
-              const perfil = PERFIL_COR[membro.perfil_acesso] || PERFIL_COR.Membro;
+              const perfil = PERFIL_COR[membro.perfil_acesso || 'Membro'] || PERFIL_COR.Membro;
               const ehUsuarioLogado = usuario?.id === membro.id;
 
               return (
@@ -216,11 +281,28 @@ export default function MembrosScreen() {
                   style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}
                 >
                   <View className="flex-row items-center">
-                    <View className="w-12 h-12 rounded-full bg-manga-orangeDark items-center justify-center mr-3">
-                      <Text className="text-white font-bold text-base">
-                        {obterIniciais(membro.nome)}
-                      </Text>
-                    </View>
+                    {ehAdministrador ? (
+                      <TouchableOpacity
+                        className="w-12 h-12 rounded-full bg-manga-orangeDark items-center justify-center mr-3 border-2 border-[#ffb74d]"
+                        onPress={() => abrirAlteracaoPerfil(membro)}
+                        activeOpacity={0.7}
+                        disabled={atualizandoId === membro.id}
+                      >
+                        {atualizandoId === membro.id ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text className="text-white font-bold text-base">
+                            {obterIniciais(membro.nome)}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    ) : (
+                      <View className="w-12 h-12 rounded-full bg-manga-orangeDark items-center justify-center mr-3">
+                        <Text className="text-white font-bold text-base">
+                          {obterIniciais(membro.nome)}
+                        </Text>
+                      </View>
+                    )}
                     <View className="flex-1">
                       <View className="flex-row items-center">
                         <Text className="font-bold text-[#333] text-sm" numberOfLines={1}>
@@ -241,11 +323,6 @@ export default function MembrosScreen() {
                         {perfil.label}
                       </Text>
                     </View>
-                  </View>
-                  <View className="flex-row items-center mt-3 pt-3 border-t border-[#f0f0f0]">
-                    <Text className="text-[10px] text-manga-gray">
-                      Membro desde {formatarData(membro.created_at)}
-                    </Text>
                   </View>
                 </View>
               );
