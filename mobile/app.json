@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Permita o acesso às fotos para publicar imagens no mural da bateria.",
-        "NSCameraUsageDescription": "Permita o acesso à câmera para tirar fotos no mural da bateria."
+        "NSCameraUsageDescription": "Permita o acesso à câmera para tirar fotos no mural da bateria.",
+        "NSUserNotificationsUsageDescription": "Permita notificações para receber lembretes de ensaios e eventos da bateria."
       }
     },
     "android": {
@@ -25,7 +26,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -53,6 +55,13 @@
         "expo-image-picker",
         {
           "photosPermission": "Permita o acesso às fotos para publicar imagens no mural da bateria."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#E35202"
         }
       ]
     ],

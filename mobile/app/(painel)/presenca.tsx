@@ -182,6 +182,20 @@ export default function PresencaScreen() {
           right={<ThemeToggle />}
         />
 
+        {!carregandoResumo && resumo.frequencia < 70 && (
+          <View
+            className="rounded-2xl p-4 mb-5"
+            style={{ backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent }}
+          >
+            <Text className="font-bold text-sm" style={{ color: colors.accent }}>
+              Frequência PAE abaixo do mínimo
+            </Text>
+            <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+              Sua frequência está em {resumo.frequencia}%. O mínimo exigido para aprovação é 70%.
+            </Text>
+          </View>
+        )}
+
         {carregandoResumo ? (
           <View
             className="rounded-2xl p-6 items-center mb-8"

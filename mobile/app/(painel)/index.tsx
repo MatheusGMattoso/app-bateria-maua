@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, type Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/api';
 import { fetchJson } from '../../utils/apiClient';
@@ -11,6 +11,7 @@ import EmptyState from '../../components/EmptyState';
 import ComingSoonModal from '../../components/ComingSoonModal';
 import ThemeToggle from '../../components/ThemeToggle';
 import { abreviarPerfil, useResponsive } from '../../utils/responsive';
+import { useNotifications } from '../../context/NotificationContext';
 
 type Evento = {
   id?: string;
@@ -45,6 +46,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { screenPadding, isSmall } = useResponsive();
+  const { permissionStatus, resyncReminders } = useNotifications();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<any>(null);
@@ -116,7 +118,8 @@ export default function DashboardScreen() {
       })();
       buscarEventos();
       carregarFeedResumo();
-    }, [buscarEventos, carregarGamificacao, carregarFeedResumo])
+      resyncReminders(false);
+    }, [buscarEventos, carregarGamificacao, carregarFeedResumo, resyncReminders])
   );
 
   const perfil = usuario?.perfil_acesso || 'Membro';
@@ -189,6 +192,13 @@ export default function DashboardScreen() {
           title="Calendário"
           subtitle="Eventos do ano"
           onPress={() => router.push('/(painel)/calendario')}
+        />
+        <ModuleCard
+          icon="🔔"
+          title="Lembretes"
+          subtitle="Notificações de ensaios e PAE"
+          badge={permissionStatus !== 'granted' ? 'Ativar' : undefined}
+          onPress={() => router.push('/(painel)/notificacoes' as Href)}
         />
         <ModuleCard
           icon="📢"

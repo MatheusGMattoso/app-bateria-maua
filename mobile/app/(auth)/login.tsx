@@ -5,6 +5,7 @@ import { BASE_URL } from '../../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
+import { useNotifications } from '../../context/NotificationContext';
 import LoadingButton from '../../components/LoadingButton';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useResponsive } from '../../utils/responsive';
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { screenPadding } = useResponsive();
+  const { setupForUser } = useNotifications();
 
   const handleLogin = async () => {
     setErro('');
@@ -37,6 +39,9 @@ export default function LoginScreen() {
       });
 
       await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
+      if (dados.usuario?.id) {
+        setupForUser(dados.usuario.id).catch(() => undefined);
+      }
       router.replace('/(painel)');
     } catch (error: any) {
       setErro(error.message || 'Erro ao fazer login.');
