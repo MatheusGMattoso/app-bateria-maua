@@ -28,7 +28,10 @@ export default function DashboardScreen() {
 
         <View className="flex-row flex-wrap justify-between">
           
-          <TouchableOpacity className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center">
+          <TouchableOpacity 
+            className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center"
+            onPress={() => router.push('/(painel)/membros')}
+          >
             <Text className="text-4xl mb-3">👥</Text>
             <Text className="text-manga-orangeDark font-bold text-lg">Membros</Text>
             <Text className="text-xs text-manga-gray text-center mt-1">Gestão da bateria</Text>
