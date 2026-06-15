@@ -50,6 +50,7 @@ export default function DashboardScreen() {
   const [usuario, setUsuario] = useState<any>(null);
   const [patrimonioVisivel, setPatrimonioVisivel] = useState(false);
   const [gamResumo, setGamResumo] = useState<{ nivel: number; nome: string; pontos: number } | null>(null);
+  const [feedResumo, setFeedResumo] = useState<{ total: number } | null>(null);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('usuario');
@@ -93,6 +94,16 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const carregarFeedResumo = useCallback(async () => {
+    try {
+      const dados = await fetchJson(`${BASE_URL}/feed?limit=1&page=1`);
+      const totalPosts = (dados.total || 0) + (dados.fixados?.length || 0);
+      setFeedResumo({ total: totalPosts });
+    } catch {
+      setFeedResumo(null);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -104,7 +115,8 @@ export default function DashboardScreen() {
         }
       })();
       buscarEventos();
-    }, [buscarEventos, carregarGamificacao])
+      carregarFeedResumo();
+    }, [buscarEventos, carregarGamificacao, carregarFeedResumo])
   );
 
   const perfil = usuario?.perfil_acesso || 'Membro';
@@ -179,6 +191,18 @@ export default function DashboardScreen() {
           onPress={() => router.push('/(painel)/calendario')}
         />
         <ModuleCard
+          icon="📢"
+          title="Mural"
+          subtitle={
+            feedResumo
+              ? feedResumo.total === 0
+                ? 'Nenhuma publicação ainda'
+                : `${feedResumo.total} publicação${feedResumo.total !== 1 ? 'ões' : ''} recentes`
+              : 'Avisos e publicações da bateria'
+          }
+          onPress={() => router.push('/(painel)/feed')}
+        />
+        <ModuleCard
           icon="🥁"
           title="Patrimônio"
           subtitle="Instrumentos e uniformes"
@@ -189,7 +213,7 @@ export default function DashboardScreen() {
         <View className="mt-5">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
-              Mural de Avisos
+              Próximos Eventos
             </Text>
             <TouchableOpacity onPress={() => router.push('/(painel)/calendario')}>
               <Text className="text-xs font-bold" style={{ color: colors.accent }}>

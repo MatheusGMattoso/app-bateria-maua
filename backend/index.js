@@ -7,6 +7,7 @@ const ensaioRoutes = require('./src/routes/ensaioRoutes');
 const eventoRoutes = require('./src/routes/eventoRoutes');
 const presencaRoutes = require('./src/routes/presencaRoutes');
 const gamificacaoRoutes = require('./src/routes/gamificacaoRoutes');
+const feedRoutes = require('./src/routes/feedRoutes');
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,9 @@ app.use('/api/presencas', presencaRoutes);
 
 // Rota de Gamificação
 app.use('/api/gamificacao', gamificacaoRoutes);
+
+// Rota do Feed / Mural Social
+app.use('/api/feed', feedRoutes);
 
 const PORT = process.env.PORT || 3000;
 

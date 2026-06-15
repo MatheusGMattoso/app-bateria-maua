@@ -39,7 +39,13 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita o acesso às fotos para publicar imagens no mural da bateria."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
