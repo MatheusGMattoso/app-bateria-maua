@@ -1,13 +1,77 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { BASE_URL } from '../../config/api';
+
+type Evento = {
+  id?: string;
+  titulo: string;
+  descricao?: string | null;
+  data_evento: string;
+  horario_evento?: string | null;
+};
+
+const NOMES_MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+const NOMES_DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+function formatarDataEvento(dataStr: string) {
+  const [ano, mes, dia] = dataStr.split('-').map(Number);
+  const data = new Date(ano, mes - 1, dia);
+  const diaSemana = NOMES_DIAS[data.getDay()];
+  return `${diaSemana}, ${dia} de ${NOMES_MESES[mes - 1]} de ${ano}`;
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
   const handleLogout = () => {
     router.replace('/(auth)/login');
   };
+
+  const buscarEventos = useCallback(async () => {
+    try {
+      setCarregando(true);
+      const anoAtual = new Date().getFullYear();
+      const resposta = await fetch(`${BASE_URL}/eventos?ano=${anoAtual}`);
+      const dados = await resposta.json();
+
+      if (!resposta.ok) {
+        throw new Error(dados.erro || 'Erro ao carregar eventos.');
+      }
+
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      const proximos = (dados.eventos || [])
+        .filter((evento: Evento) => {
+          const [ano, mes, dia] = evento.data_evento.split('-').map(Number);
+          return new Date(ano, mes - 1, dia) >= hoje;
+        })
+        .sort((a: Evento, b: Evento) => {
+          const chaveA = `${a.data_evento}T${a.horario_evento || '23:59'}`;
+          const chaveB = `${b.data_evento}T${b.horario_evento || '23:59'}`;
+          return chaveA.localeCompare(chaveB);
+        });
+
+      setEventos(proximos);
+    } catch (error) {
+      setEventos([]);
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      buscarEventos();
+    }, [buscarEventos])
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-[#f5f5f5]">
@@ -64,13 +128,51 @@ export default function DashboardScreen() {
         </View>
 
         <View className="mt-4">
-          <Text className="text-lg font-bold text-[#333] mb-4">Mural de Avisos</Text>
-          <View className="bg-manga-white p-4 rounded-xl border-l-4 border-manga-orangeDark shadow-sm">
-            <Text className="font-bold text-[#333] mb-1">Ensaio Geral - Sábado</Text>
-            <Text className="text-sm text-manga-gray">
-              Não se esqueçam do ensaio geral neste sábado às 14h na quadra. Presença obrigatória para todos os naipes!
-            </Text>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-lg font-bold text-[#333]">Mural de Avisos</Text>
+            <TouchableOpacity onPress={() => router.push('/(painel)/calendario')}>
+              <Text className="text-xs text-manga-orangeDark font-bold">Ver calendário ›</Text>
+            </TouchableOpacity>
           </View>
+
+          {carregando ? (
+            <View className="bg-manga-white p-6 rounded-xl shadow-sm items-center">
+              <ActivityIndicator size="small" color="#E65100" />
+              <Text className="text-xs text-manga-gray mt-2">Carregando eventos...</Text>
+            </View>
+          ) : eventos.length === 0 ? (
+            <View className="bg-manga-white p-6 rounded-xl border-l-4 border-manga-orangeDark shadow-sm items-center">
+              <Text className="text-3xl mb-2">📭</Text>
+              <Text className="font-bold text-[#333] mb-1">Nenhum evento agendado</Text>
+              <Text className="text-sm text-manga-gray text-center">
+                Os próximos eventos do calendário aparecerão aqui.
+              </Text>
+            </View>
+          ) : (
+            eventos.map((evento, index) => (
+              <View
+                key={`${evento.id || evento.titulo}-${index}`}
+                className="bg-manga-white p-4 rounded-xl border-l-4 border-manga-orangeDark shadow-sm mb-3"
+              >
+                <View className="flex-row items-start justify-between">
+                  <Text className="font-bold text-[#333] flex-1 mr-2">{evento.titulo}</Text>
+                  {evento.horario_evento ? (
+                    <View className="bg-[#fff3eb] px-2 py-1 rounded-full">
+                      <Text className="text-manga-orangeDark text-xs font-bold">
+                        {evento.horario_evento}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text className="text-xs text-manga-orangeDark font-semibold mt-1">
+                  📅 {formatarDataEvento(evento.data_evento)}
+                </Text>
+                {evento.descricao ? (
+                  <Text className="text-sm text-manga-gray mt-2">{evento.descricao}</Text>
+                ) : null}
+              </View>
+            ))
+          )}
         </View>
 
       </ScrollView>
