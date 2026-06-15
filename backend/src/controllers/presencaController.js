@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const gamificacaoService = require('../services/gamificacaoService');
 
 exports.registrarPresenca = async (req, res) => {
   try {
@@ -24,6 +25,8 @@ exports.registrarPresenca = async (req, res) => {
       return res.status(404).json({ erro: 'Membro não encontrado.' });
     }
 
+    const perfilAntes = await gamificacaoService.montarPerfilGamificacao(membro_id);
+
     const { data: presenca, error: erroPresenca } = await supabase
       .from('presencas')
       .insert([{ 
@@ -40,7 +43,15 @@ exports.registrarPresenca = async (req, res) => {
 
     if (erroPresenca) throw erroPresenca;
 
-    res.status(201).json({ mensagem: 'Presença confirmada!', presenca });
+    let gamificacao = null;
+    try {
+      const perfilDepois = await gamificacaoService.montarPerfilGamificacao(membro_id);
+      gamificacao = gamificacaoService.compararEstado(perfilAntes, perfilDepois);
+    } catch (erroGamificacao) {
+      console.error('Erro ao calcular gamificação pós-presença:', erroGamificacao.message);
+    }
+
+    res.status(201).json({ mensagem: 'Presença confirmada!', presenca, gamificacao });
   } catch (error) {
     res.status(500).json({ erro: error.message });
   }
@@ -49,47 +60,8 @@ exports.registrarPresenca = async (req, res) => {
 exports.obterResumo = async (req, res) => {
   try {
     const { membro_id } = req.params;
-
-    const { data: ensaios, error: erroEnsaios } = await supabase
-      .from('ensaios')
-      .select('id, peso, categoria');
-
-    if (erroEnsaios) throw erroEnsaios;
-
-    const totalPontosPossiveis = ensaios
-      .filter(e => e.categoria === 'ensaio')
-      .reduce((soma, e) => soma + (e.peso || 1), 0);
-
-    const { data: presencas, error: erroPresencas } = await supabase
-      .from('presencas')
-      .select('id, ensaios(peso, categoria)')
-      .eq('membro_id', membro_id);
-
-    if (erroPresencas) throw erroPresencas;
-
-    let pontosObtidos = 0;
-    let comparecimentos = presencas.length;
-
-    presencas.forEach(p => {
-      if (p.ensaios) pontosObtidos += (p.ensaios.peso || 1);
-    });
-
-    const qtdeEnsaiosTotais = ensaios.filter(e => e.categoria === 'ensaio').length;
-    const qtdeEnsaiosComparecidos = presencas.filter(p => p.ensaios?.categoria === 'ensaio').length;
-    const faltas = qtdeEnsaiosTotais - qtdeEnsaiosComparecidos;
-
-    let frequencia = totalPontosPossiveis > 0 
-      ? Math.round((pontosObtidos / totalPontosPossiveis) * 100) 
-      : 0;
-    
-    if (frequencia > 100) frequencia = 100;
-
-    res.status(200).json({
-      presencas: comparecimentos, 
-      faltas: faltas >= 0 ? faltas : 0, 
-      frequencia: frequencia
-    });
-
+    const resumo = await gamificacaoService.obterResumoPresenca(membro_id);
+    res.status(200).json(resumo);
   } catch (error) {
     res.status(500).json({ erro: error.message });
   }

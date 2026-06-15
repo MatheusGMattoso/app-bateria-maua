@@ -6,6 +6,7 @@ const membroRoutes = require('./src/routes/membroRoutes');
 const ensaioRoutes = require('./src/routes/ensaioRoutes');
 const eventoRoutes = require('./src/routes/eventoRoutes');
 const presencaRoutes = require('./src/routes/presencaRoutes');
+const gamificacaoRoutes = require('./src/routes/gamificacaoRoutes');
 
 const app = express();
 app.use(cors());
@@ -22,6 +23,9 @@ app.use('/api/eventos', eventoRoutes);
 
 // Rota de Presenças
 app.use('/api/presencas', presencaRoutes);
+
+// Rota de Gamificação
+app.use('/api/gamificacao', gamificacaoRoutes);
 
 const PORT = process.env.PORT || 3000;
 

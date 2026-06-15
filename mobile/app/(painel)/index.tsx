@@ -49,6 +49,7 @@ export default function DashboardScreen() {
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<any>(null);
   const [patrimonioVisivel, setPatrimonioVisivel] = useState(false);
+  const [gamResumo, setGamResumo] = useState<{ nivel: number; nome: string; pontos: number } | null>(null);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('usuario');
@@ -83,14 +84,27 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const carregarGamificacao = useCallback(async (membroId: string) => {
+    try {
+      const dados = await fetchJson(`${BASE_URL}/gamificacao/${membroId}`);
+      setGamResumo({ nivel: dados.nivel.numero, nome: dados.nivel.nome, pontos: dados.pontos });
+    } catch {
+      setGamResumo(null);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       (async () => {
         const usuarioStorage = await AsyncStorage.getItem('usuario');
-        if (usuarioStorage) setUsuario(JSON.parse(usuarioStorage));
+        if (usuarioStorage) {
+          const u = JSON.parse(usuarioStorage);
+          setUsuario(u);
+          if (u?.id) carregarGamificacao(u.id);
+        }
       })();
       buscarEventos();
-    }, [buscarEventos])
+    }, [buscarEventos, carregarGamificacao])
   );
 
   const perfil = usuario?.perfil_acesso || 'Membro';
@@ -151,6 +165,12 @@ export default function DashboardScreen() {
           title="Presença"
           subtitle="Controle de ensaios"
           onPress={() => router.push('/(painel)/presenca')}
+        />
+        <ModuleCard
+          icon="🥭"
+          title="Minha Manga"
+          subtitle={gamResumo ? `Nível ${gamResumo.nivel} · ${gamResumo.nome} · ${gamResumo.pontos} pts` : 'Pontos, níveis e conquistas'}
+          onPress={() => router.push('/(painel)/gamificacao')}
         />
         <ModuleCard
           icon="📅"

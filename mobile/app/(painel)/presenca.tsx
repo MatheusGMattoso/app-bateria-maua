@@ -11,6 +11,7 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import ThemeToggle from '../../components/ThemeToggle';
+import GamificationCelebration, { GamificacaoFeedback } from '../../components/GamificationCelebration';
 import { useResponsive } from '../../utils/responsive';
 
 export default function PresencaScreen() {
@@ -20,6 +21,7 @@ export default function PresencaScreen() {
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
   const [resumo, setResumo] = useState({ presencas: 0, faltas: 0, frequencia: 0 });
   const [carregandoResumo, setCarregandoResumo] = useState(true);
+  const [celebracao, setCelebracao] = useState<GamificacaoFeedback | null>(null);
   const jaLeuRef = useRef(false);
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -100,14 +102,23 @@ export default function PresencaScreen() {
     }
 
     try {
-      await fetchJson(`${BASE_URL}/presencas`, {
+      const resposta = await fetchJson(`${BASE_URL}/presencas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ codigo_qr, membro_id: usuarioId }),
       });
 
-      const msgSucesso = 'Sua presença foi confirmada neste ensaio!';
-      Platform.OS === 'web' ? window.alert(`Sucesso! ${msgSucesso}`) : Alert.alert('Sucesso!', msgSucesso);
+      const gam: GamificacaoFeedback | null = resposta.gamificacao || null;
+      const temCelebracao = gam && (gam.subiuNivel || gam.novasConquistas.length > 0);
+
+      if (temCelebracao) {
+        setCelebracao(gam);
+      } else {
+        const ganho = gam && gam.pontosGanhos > 0 ? ` +${gam.pontosGanhos} pts de manga!` : '';
+        const msgSucesso = `Sua presença foi confirmada neste ensaio!${ganho}`;
+        Platform.OS === 'web' ? window.alert(`Sucesso! ${msgSucesso}`) : Alert.alert('Sucesso!', msgSucesso);
+      }
+
       carregarResumo(usuarioId);
     } catch (error: any) {
       Platform.OS === 'web' ? window.alert('Erro: ' + error.message) : Alert.alert('Erro', error.message);
@@ -204,6 +215,19 @@ export default function PresencaScreen() {
           </View>
         )}
 
+        {!carregandoResumo && (
+          <TouchableOpacity
+            className="flex-row items-center justify-center py-3 rounded-2xl mb-8"
+            style={{ backgroundColor: colors.accentSoft }}
+            onPress={() => router.push('/(painel)/gamificacao')}
+            activeOpacity={0.85}
+          >
+            <Text className="text-sm font-bold" style={{ color: colors.accent }}>
+              🥭 Ver meu progresso
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <Text className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>
           Registro de Ensaio
         </Text>
@@ -245,6 +269,12 @@ export default function PresencaScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      <GamificationCelebration
+        visible={celebracao !== null}
+        feedback={celebracao}
+        onClose={() => setCelebracao(null)}
+      />
     </SafeAreaView>
   );
 }
