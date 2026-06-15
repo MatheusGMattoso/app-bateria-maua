@@ -1,18 +1,1 @@
-[
-  {
-    "id": "local_1779144920263",
-    "titulo": "Teste persistencia DB",
-    "descricao": "Verificacao automatica",
-    "data_evento": "2026-06-15",
-    "horario_evento": "18:00",
-    "criado_por": null
-  },
-  {
-    "id": "local_1779144925938",
-    "titulo": "Teste DB 2",
-    "descricao": "check",
-    "data_evento": "2026-06-20",
-    "horario_evento": "19:00",
-    "criado_por": null
-  }
-]
+[]
