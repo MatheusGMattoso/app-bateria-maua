@@ -1,9 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import type { NotificationContentInput } from 'expo-notifications/build/Notifications.types';
 import { BASE_URL } from '../config/api';
 import { fetchJson } from '../utils/apiClient';
+import { notificationsSupported, pushNotificationsSupported } from '../utils/notificationsCapability';
+import {
+  ensureAndroidNotificationChannel,
+  loadNotificationsLocal,
+  type NotificationsLocalModule,
+} from './notificationsModule';
 
 export type TipoEvento = 'ensaio' | 'evento' | 'show';
 
@@ -42,15 +48,10 @@ const TIPO_LABEL: Record<TipoEvento, string> = {
   show: 'Show',
 };
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+async function loadNotifications(): Promise<NotificationsLocalModule | null> {
+  if (!notificationsSupported()) return null;
+  return loadNotificationsLocal();
+}
 
 function montarDataHoraEvento(evento: EventoCalendario): Date {
   const [ano, mes, dia] = evento.data_evento.split('-').map(Number);
@@ -68,8 +69,13 @@ function normalizarTipo(tipo?: TipoEvento | null): TipoEvento {
   return 'ensaio';
 }
 
+export { notificationsSupported, pushNotificationsSupported };
+
 export async function requestPermissions(): Promise<boolean> {
   if (!Device.isDevice) return false;
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return false;
 
   const existente = await Notifications.getPermissionsAsync();
   if (existente.status === 'granted') return true;
@@ -79,6 +85,11 @@ export async function requestPermissions(): Promise<boolean> {
 }
 
 export async function getPermissionStatus(): Promise<'granted' | 'denied' | 'undetermined'> {
+  if (!notificationsSupported()) return 'undetermined';
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return 'undetermined';
+
   const { status } = await Notifications.getPermissionsAsync();
   return status;
 }
@@ -149,17 +160,25 @@ async function saveScheduledIds(ids: string[]): Promise<void> {
 }
 
 export async function cancelAllScheduled(): Promise<void> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
+
   const ids = await loadScheduledIds();
-  await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined)));
+  await Promise.all(
+    ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined))
+  );
   await Notifications.cancelAllScheduledNotificationsAsync();
   await saveScheduledIds([]);
 }
 
 async function scheduleAt(
   date: Date,
-  content: Notifications.NotificationContentInput
+  content: NotificationContentInput
 ): Promise<string | null> {
   if (date.getTime() <= Date.now() + 5000) return null;
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
 
   const id = await Notifications.scheduleNotificationAsync({
     content,
@@ -220,6 +239,9 @@ export async function checkPaeAlert(membroId: string, prefs: NotificationPrefere
   const ultimoAlerta = await AsyncStorage.getItem(PAE_ALERT_KEY);
   if (ultimoAlerta && Date.now() - Number(ultimoAlerta) < PAE_ALERT_INTERVAL_MS) return;
 
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
+
   try {
     const dados = await fetchJson(`${BASE_URL}/gamificacao/${membroId}`);
     const frequencia = dados?.resumo?.frequencia ?? 100;
@@ -256,7 +278,7 @@ async function buscarEventosFuturos(): Promise<EventoCalendario[]> {
 }
 
 export async function resyncAll(membroId: string, force = false): Promise<void> {
-  if (!Device.isDevice) return;
+  if (!Device.isDevice || !notificationsSupported()) return;
 
   const permissao = await getPermissionStatus();
   if (permissao !== 'granted') return;
@@ -287,6 +309,11 @@ export async function resyncEventReminders(membroId: string): Promise<void> {
 }
 
 export async function scheduleTestNotification(): Promise<void> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) {
+    throw new Error('Notificações indisponíveis neste ambiente.');
+  }
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Lembrete de teste 🥁',
@@ -301,21 +328,23 @@ export async function scheduleTestNotification(): Promise<void> {
 }
 
 export async function registerForPushNotifications(membroId: string): Promise<string | null> {
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice || !pushNotificationsSupported()) return null;
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
 
   const permissao = await requestPermissions();
   if (!permissao) return null;
 
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Lembretes da Bateria',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 250, 250, 250],
-    });
+    await ensureAndroidNotificationChannel();
   }
 
   try {
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const { default: getExpoPushTokenAsync } = await import(
+      'expo-notifications/build/getExpoPushTokenAsync'
+    );
+    const tokenData = await getExpoPushTokenAsync();
     const token = tokenData.data;
 
     await fetchJson(`${BASE_URL}/notificacoes/token`, {
@@ -335,7 +364,30 @@ export async function registerForPushNotifications(membroId: string): Promise<st
 }
 
 export async function setupAfterLogin(membroId: string): Promise<void> {
+  if (!notificationsSupported()) return;
+
   await requestPermissions();
-  await registerForPushNotifications(membroId);
+  if (Platform.OS === 'android') {
+    await ensureAndroidNotificationChannel();
+  }
+  if (pushNotificationsSupported()) {
+    await registerForPushNotifications(membroId);
+  }
   await resyncAll(membroId, true);
+}
+
+export async function addNotificationResponseListener(
+  onResponse: (screen: string | undefined) => void
+): Promise<(() => void) | null> {
+  if (!notificationsSupported()) return null;
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
+
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    const screen = response.notification.request.content.data?.screen as string | undefined;
+    onResponse(screen);
+  });
+
+  return () => subscription.remove();
 }

@@ -3,7 +3,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
-import { NotificationProvider } from '../context/NotificationContext';
 
 function StackComTema() {
   const { colors, isDark } = useTheme();
@@ -29,9 +28,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <NotificationProvider>
-          <StackComTema />
-        </NotificationProvider>
+        <StackComTema />
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -22,7 +22,8 @@ import {
 
 export default function NotificationSettingsSection() {
   const { colors, isDark } = useTheme();
-  const { permissionStatus, requestPermission, resyncReminders } = useNotifications();
+  const { permissionStatus, notificationsAvailable, requestPermission, resyncReminders } =
+    useNotifications();
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
   const [salvando, setSalvando] = useState(false);
   const [testando, setTestando] = useState(false);
@@ -122,7 +123,7 @@ export default function NotificationSettingsSection() {
 
   return (
     <View>
-      {permissionStatus !== 'granted' && (
+      {notificationsAvailable && permissionStatus !== 'granted' && (
         <View
           className="rounded-2xl p-4 mb-4"
           style={{ backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent }}
@@ -146,6 +147,8 @@ export default function NotificationSettingsSection() {
         </View>
       )}
 
+      {notificationsAvailable && (
+        <>
       <View
         className="rounded-2xl px-4 mb-4"
         style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
@@ -181,8 +184,10 @@ export default function NotificationSettingsSection() {
       </TouchableOpacity>
 
       <Text className="text-xs text-center px-2" style={{ color: colors.textMuted }}>
-        Lembretes locais funcionam no Expo Go. Push remoto com app fechado requer EAS Build.
+        Lembretes locais funcionam no Expo Go. Push remoto requer EAS Build.
       </Text>
+        </>
+      )}
     </View>
   );
 }
