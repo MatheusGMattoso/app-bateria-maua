@@ -8,10 +8,12 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import LoadingButton from '../../components/LoadingButton';
+import { useResponsive } from '../../utils/responsive';
 
 export default function GerarQrCodeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { screenPadding, isSmall } = useResponsive();
 
   const [etapa, setEtapa] = useState(1);
   const [dataEnsaio, setDataEnsaio] = useState('');
@@ -73,7 +75,7 @@ export default function GerarQrCodeScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: screenPadding }} showsVerticalScrollIndicator={false}>
           <ScreenHeader title="Gerar QR Code" subtitle="Crie o código de presença do ensaio." onBack={() => router.back()} />
 
           {etapa === 1 ? (
@@ -157,7 +159,7 @@ export default function GerarQrCodeScreen() {
                 className="p-6 rounded-3xl mb-12"
                 style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.border }}
               >
-                <QRCode value={valorQrCode} size={250} color="#E35202" backgroundColor="#FFFFFF" />
+                <QRCode value={valorQrCode} size={isSmall ? 200 : 250} color="#E35202" backgroundColor="#FFFFFF" />
               </View>
 
               <TouchableOpacity

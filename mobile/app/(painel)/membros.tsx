@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
 import ThemeToggle from '../../components/ThemeToggle';
+import { useResponsive } from '../../utils/responsive';
 
 type Membro = {
   id: string;
@@ -44,6 +45,7 @@ function obterIniciais(nome: string) {
 
 export default function MembrosScreen() {
   const { colors, isDark } = useTheme();
+  const { screenPadding, isSmall } = useResponsive();
   const [membros, setMembros] = useState<Membro[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -169,7 +171,7 @@ export default function MembrosScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
+        contentContainerStyle={{ padding: screenPadding, paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />}
       >
@@ -181,7 +183,7 @@ export default function MembrosScreen() {
         />
 
         <View
-          className="flex-row rounded-2xl p-4 mb-5"
+          className={`flex-row rounded-2xl ${isSmall ? 'p-3' : 'p-4'} mb-5`}
           style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
         >
           {[
@@ -192,11 +194,11 @@ export default function MembrosScreen() {
           ].map((item, idx) => (
             <React.Fragment key={item.rotulo}>
               {idx > 0 && <View style={{ width: 1, backgroundColor: colors.border }} />}
-              <View className="flex-1 items-center">
-                <Text className="text-2xl font-bold" style={{ color: item.cor }}>
+              <View className="flex-1 items-center min-w-0 px-0.5">
+                <Text className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold`} style={{ color: item.cor }}>
                   {item.valor}
                 </Text>
-                <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                <Text className="text-[10px] font-semibold text-center" style={{ color: colors.textSecondary }} numberOfLines={1}>
                   {item.rotulo}
                 </Text>
               </View>
@@ -318,9 +320,9 @@ export default function MembrosScreen() {
                         </Text>
                       </View>
                     )}
-                    <View className="flex-1">
-                      <View className="flex-row items-center">
-                        <Text className="font-bold text-sm" style={{ color: colors.textPrimary }} numberOfLines={1}>
+                    <View className="flex-1 min-w-0">
+                      <View className="flex-row items-center flex-wrap">
+                        <Text className="font-bold text-sm shrink" style={{ color: colors.textPrimary }} numberOfLines={1}>
                           {membro.nome}
                         </Text>
                         {ehUsuarioLogado && (
@@ -335,7 +337,7 @@ export default function MembrosScreen() {
                         {membro.email}
                       </Text>
                     </View>
-                    <View className="px-3 py-1.5 rounded-full" style={{ backgroundColor: perfil.bg }}>
+                    <View className="px-2 py-1.5 rounded-full shrink-0 ml-1" style={{ backgroundColor: perfil.bg }}>
                       <Text className="text-[10px] font-bold" style={{ color: perfil.text }}>
                         {ROTULO_PERFIL[perfilNome] || perfilNome}
                       </Text>

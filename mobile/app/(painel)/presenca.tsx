@@ -11,6 +11,7 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import ThemeToggle from '../../components/ThemeToggle';
+import { useResponsive } from '../../utils/responsive';
 
 export default function PresencaScreen() {
   const [permissao, solicitarPermissao] = useCameraPermissions();
@@ -22,6 +23,7 @@ export default function PresencaScreen() {
   const jaLeuRef = useRef(false);
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { screenPadding, isSmall } = useResponsive();
 
   const carregarResumo = async (id: string) => {
     try {
@@ -162,7 +164,7 @@ export default function PresencaScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: screenPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <ScreenHeader
           title="Presença"
           subtitle="Acompanhe seu rendimento nos ensaios."
@@ -180,7 +182,7 @@ export default function PresencaScreen() {
             </Text>
           </View>
         ) : (
-          <View className="flex-row justify-between mb-8">
+          <View className="flex-row mb-8" style={{ gap: isSmall ? 6 : 10 }}>
             {[
               { valor: `${resumo.presencas}`, rotulo: 'Presenças', cor: colors.successText },
               { valor: `${resumo.faltas}`, rotulo: 'Faltas', cor: colors.dangerText },
@@ -188,13 +190,13 @@ export default function PresencaScreen() {
             ].map((item) => (
               <View
                 key={item.rotulo}
-                className="w-[31%] p-4 rounded-2xl items-center"
+                className={`flex-1 ${isSmall ? 'p-3' : 'p-4'} rounded-2xl items-center min-w-0`}
                 style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
               >
-                <Text className="text-2xl font-bold" style={{ color: item.cor }}>
+                <Text className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold`} style={{ color: item.cor }}>
                   {item.valor}
                 </Text>
-                <Text className="text-xs text-center mt-1" style={{ color: colors.textSecondary }}>
+                <Text className="text-[10px] text-center mt-1" style={{ color: colors.textSecondary }} numberOfLines={1}>
                   {item.rotulo}
                 </Text>
               </View>

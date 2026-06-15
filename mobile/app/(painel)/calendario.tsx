@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
 import ThemeToggle from '../../components/ThemeToggle';
+import { useResponsive } from '../../utils/responsive';
 
 type Evento = {
   id?: string;
@@ -59,6 +60,7 @@ function formatarDataExibicao(dataStr: string) {
 export default function CalendarioScreen() {
   const hoje = new Date();
   const { colors, isDark } = useTheme();
+  const { screenPadding, isSmall, width } = useResponsive();
   const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
   const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth());
   const [diaSelecionado, setDiaSelecionado] = useState<number | null>(null);
@@ -236,6 +238,8 @@ export default function CalendarioScreen() {
     borderWidth: 1,
   };
 
+  const larguraCelula = Math.floor((width - screenPadding * 2 - 32) / 7);
+
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <KeyboardAvoidingView
@@ -245,7 +249,7 @@ export default function CalendarioScreen() {
       >
         <ScrollView
           ref={scrollViewRef}
-          contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
+          contentContainerStyle={{ padding: screenPadding, paddingBottom: 60 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -269,7 +273,11 @@ export default function CalendarioScreen() {
                   {'<'}
                 </Text>
               </TouchableOpacity>
-              <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+              <Text
+                className={`${isSmall ? 'text-base' : 'text-lg'} font-bold text-center flex-1 px-2`}
+                style={{ color: colors.textPrimary }}
+                numberOfLines={1}
+              >
                 {NOMES_MESES[mesSelecionado]} {anoSelecionado}
               </Text>
               <TouchableOpacity
@@ -283,21 +291,21 @@ export default function CalendarioScreen() {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-row justify-between mb-2">
+            <View className="flex-row mb-2">
               {NOMES_DIAS.map((dia, index) => (
                 <Text
                   key={`dia-semana-${index}`}
-                  className="w-[13%] text-center font-bold text-xs"
-                  style={{ color: colors.textSecondary }}
+                  className="text-center font-bold text-xs"
+                  style={{ color: colors.textSecondary, width: larguraCelula }}
                 >
-                  {dia}
+                  {isSmall ? dia.charAt(0) : dia}
                 </Text>
               ))}
             </View>
 
-            <View className="flex-row flex-wrap justify-between">
+            <View className="flex-row flex-wrap">
               {diasCalendario.map((dia, index) => {
-                if (!dia) return <View key={`vazio-${index}`} className="w-[13%] h-10 mb-2" />;
+                if (!dia) return <View key={`vazio-${index}`} style={{ width: larguraCelula, height: 40, marginBottom: 8 }} />;
 
                 const data = `${anoSelecionado}-${`${mesSelecionado + 1}`.padStart(2, '0')}-${`${dia}`.padStart(2, '0')}`;
                 const temEvento = Boolean(eventosPorData[data]?.length);
@@ -313,8 +321,8 @@ export default function CalendarioScreen() {
                 return (
                   <TouchableOpacity
                     key={data}
-                    className="w-[13%] h-10 mb-2 rounded-xl items-center justify-center"
-                    style={{ backgroundColor: fundo }}
+                    className="rounded-xl items-center justify-center"
+                    style={{ width: larguraCelula, height: 40, marginBottom: 8, backgroundColor: fundo }}
                     onPress={() => selecionarDia(dia)}
                     activeOpacity={0.7}
                   >

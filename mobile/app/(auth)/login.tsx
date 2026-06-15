@@ -7,6 +7,7 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import LoadingButton from '../../components/LoadingButton';
 import ThemeToggle from '../../components/ThemeToggle';
+import { useResponsive } from '../../utils/responsive';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -17,6 +18,7 @@ export default function LoginScreen() {
 
   const router = useRouter();
   const { colors } = useTheme();
+  const { screenPadding } = useResponsive();
 
   const handleLogin = async () => {
     setErro('');
@@ -59,11 +61,11 @@ export default function LoginScreen() {
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row justify-end px-6">
+        <View className="flex-row justify-end" style={{ paddingHorizontal: screenPadding, paddingTop: 8 }}>
           <ThemeToggle />
         </View>
 
-        <View className="px-8 py-5">
+        <View style={{ paddingHorizontal: screenPadding, paddingVertical: 20 }}>
           <View className="items-center mb-6">
             <View
               className="w-16 h-16 rounded-2xl items-center justify-center mb-3"

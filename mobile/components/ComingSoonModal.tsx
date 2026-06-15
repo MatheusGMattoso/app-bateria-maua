@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useResponsive } from '../utils/responsive';
 
 type Props = {
   visible: boolean;
@@ -12,10 +13,11 @@ type Props = {
 
 export default function ComingSoonModal({ visible, onClose, title, message, icon = '🥭' }: Props) {
   const { colors } = useTheme();
+  const { screenPadding } = useResponsive();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.overlay }}>
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.overlay, paddingHorizontal: screenPadding }}>
         <View
           className="w-full rounded-3xl p-6 items-center"
           style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}

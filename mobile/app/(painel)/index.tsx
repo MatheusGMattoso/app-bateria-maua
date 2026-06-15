@@ -10,6 +10,7 @@ import ModuleCard from '../../components/ModuleCard';
 import EmptyState from '../../components/EmptyState';
 import ComingSoonModal from '../../components/ComingSoonModal';
 import ThemeToggle from '../../components/ThemeToggle';
+import { abreviarPerfil, useResponsive } from '../../utils/responsive';
 
 type Evento = {
   id?: string;
@@ -43,6 +44,7 @@ function primeiroNome(nome?: string) {
 export default function DashboardScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { screenPadding, isSmall } = useResponsive();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<any>(null);
@@ -96,36 +98,41 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <View className="flex-row justify-between items-center mb-7 mt-1">
-          <View className="flex-1">
-            <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+      <ScrollView contentContainerStyle={{ padding: screenPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <View className="mb-7 mt-1">
+          <View className="flex-row items-start justify-between">
+            <Text
+              className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold flex-1 pr-3`}
+              style={{ color: colors.textPrimary }}
+              numberOfLines={2}
+            >
               Olá, {primeiroNome(usuario?.nome)}! 🥭
             </Text>
-            <View className="flex-row items-center mt-1">
-              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
-                Bem-vindo ao Mauá Core
-              </Text>
-              <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
-                <Text className="text-[10px] font-bold" style={{ color: colors.accent }}>
-                  {perfil}
+
+            <View className="flex-row items-center shrink-0" style={{ gap: 8 }}>
+              <ThemeToggle />
+              <TouchableOpacity
+                onPress={handleLogout}
+                className="px-3 py-2 rounded-full justify-center items-center"
+                style={{ backgroundColor: colors.accent }}
+                activeOpacity={0.85}
+              >
+                <Text className="text-sm font-bold" style={{ color: colors.onAccent }}>
+                  Sair
                 </Text>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View className="flex-row items-center">
-            <ThemeToggle />
-            <TouchableOpacity
-              onPress={handleLogout}
-              className="ml-2 px-4 py-2 rounded-full justify-center items-center"
-              style={{ backgroundColor: colors.accent }}
-              activeOpacity={0.85}
-            >
-              <Text className="font-bold" style={{ color: colors.onAccent }}>
-                Sair
+          <View className="flex-row items-center flex-wrap mt-2" style={{ gap: 8 }}>
+            <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+              Bem-vindo ao Mauá Core
+            </Text>
+            <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+              <Text className="text-[10px] font-bold" style={{ color: colors.accent }}>
+                {abreviarPerfil(perfil)}
               </Text>
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -213,18 +220,22 @@ export default function DashboardScreen() {
                 }}
               >
                 <View className="flex-row items-start justify-between">
-                  <Text className="font-bold flex-1 mr-2" style={{ color: colors.textPrimary }}>
+                  <Text
+                    className="font-bold flex-1 mr-2"
+                    style={{ color: colors.textPrimary }}
+                    numberOfLines={2}
+                  >
                     {evento.titulo}
                   </Text>
                   {evento.horario_evento ? (
-                    <View className="px-2 py-1 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+                    <View className="px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: colors.accentSoft }}>
                       <Text className="text-xs font-bold" style={{ color: colors.accent }}>
                         {evento.horario_evento}
                       </Text>
                     </View>
                   ) : null}
                 </View>
-                <Text className="text-xs font-semibold mt-1" style={{ color: colors.accent }}>
+                <Text className="text-xs font-semibold mt-1" style={{ color: colors.accent }} numberOfLines={2}>
                   📅 {formatarDataEvento(evento.data_evento)}
                 </Text>
                 {evento.descricao ? (

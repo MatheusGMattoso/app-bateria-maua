@@ -4,18 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
+import { useResponsive } from '../utils/responsive';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { screenPadding } = useResponsive();
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
-      <View className="flex-row justify-end px-6 pt-2">
+      <View className="flex-row justify-end" style={{ paddingHorizontal: screenPadding, paddingTop: 8 }}>
         <ThemeToggle />
       </View>
 
-      <View className="flex-1 justify-between px-8 pb-16 pt-6">
+      <View className="flex-1 justify-between pb-16" style={{ paddingHorizontal: screenPadding, paddingTop: 24 }}>
         <View className="flex-1 justify-center items-center">
           <View
             className="w-24 h-24 rounded-3xl items-center justify-center mb-6"
