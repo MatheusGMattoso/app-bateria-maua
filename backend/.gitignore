@@ -1,2 +1,4 @@
 node_modules/
 .env
+uploads/feed/*
+!uploads/feed/.gitkeep

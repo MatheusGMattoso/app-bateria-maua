@@ -3,110 +3,126 @@ import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform
 import { useRouter } from 'expo-router';
 import { BASE_URL } from '../../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fetchJson } from '../../utils/apiClient';
+import { useTheme } from '../../context/ThemeContext';
+import LoadingButton from '../../components/LoadingButton';
+import ThemeToggle from '../../components/ThemeToggle';
+import { useResponsive } from '../../utils/responsive';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  
   const [erro, setErro] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
   const router = useRouter();
+  const { colors } = useTheme();
+  const { screenPadding } = useResponsive();
 
   const handleLogin = async () => {
     setErro('');
 
     if (!email || !senha) {
-      setErro("Por favor, preencha seu e-mail e senha.");
+      setErro('Por favor, preencha seu e-mail e senha.');
       return;
     }
 
     try {
-      const resposta = await fetch(`${BASE_URL}/membros/login`, {
+      setCarregando(true);
+      const dados = await fetchJson(`${BASE_URL}/membros/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha }),
       });
 
-      const dados = await resposta.json();
-
-      if (resposta.ok) {
-        await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
-        router.replace('/(painel)'); 
-      } else {
-        setErro(dados.message || "Erro ao fazer login.");
-      }
-    } catch (error) {
-      console.error(error);
-      setErro("Erro de conexão com o servidor.");
+      await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
+      router.replace('/(painel)');
+    } catch (error: any) {
+      setErro(error.message || 'Erro ao fazer login.');
+    } finally {
+      setCarregando(false);
     }
   };
 
+  const estiloInput = {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    color: colors.textPrimary,
+  };
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-[#f5f5f5]"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
     >
-      <ScrollView 
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} 
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-8 py-5">
-          <Text className="text-3xl font-bold text-[#333] text-center">Bem-vindo(a)!</Text>
-          <Text className="text-base text-manga-gray text-center mb-10">Acesse o painel da Bateria Mauá</Text>
+        <View className="flex-row justify-end" style={{ paddingHorizontal: screenPadding, paddingTop: 8 }}>
+          <ThemeToggle />
+        </View>
+
+        <View style={{ paddingHorizontal: screenPadding, paddingVertical: 20 }}>
+          <View className="items-center mb-6">
+            <View
+              className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
+              style={{ backgroundColor: colors.accentSoft }}
+            >
+              <Text style={{ fontSize: 32 }}>🥭</Text>
+            </View>
+            <Text className="text-3xl font-bold text-center" style={{ color: colors.textPrimary }}>
+              Bem-vindo(a)!
+            </Text>
+            <Text className="text-base text-center mt-1" style={{ color: colors.textSecondary }}>
+              Acesse o painel da Bateria Mauá
+            </Text>
+          </View>
 
           <TextInput
-            className="bg-manga-white h-[50px] rounded-lg px-4 mb-4 border border-[#ddd] text-base text-[#666]"
+            className="h-[50px] rounded-2xl px-4 mb-4 text-base"
+            style={{ ...estiloInput, borderWidth: 1 }}
             placeholder="E-mail"
-            placeholderTextColor="#666"
+            placeholderTextColor={colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
           />
 
-          <View className="flex-row items-center bg-manga-white h-[50px] rounded-lg mb-2 border border-[#ddd]">
+          <View
+            className="flex-row items-center h-[50px] rounded-2xl mb-6"
+            style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
+          >
             <TextInput
-              className="flex-1 px-4 text-base text-[#666]"
+              className="flex-1 px-4 text-base"
+              style={{ color: colors.textPrimary }}
               placeholder="Senha"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.textMuted}
               value={senha}
               onChangeText={setSenha}
               secureTextEntry={!mostrarSenha}
             />
-            <TouchableOpacity 
-              className="px-4 h-full justify-center" 
-              onPress={() => setMostrarSenha(!mostrarSenha)}
-            >
-              <Text className="text-manga-orangeDark text-sm font-bold">
+            <TouchableOpacity className="px-4 h-full justify-center" onPress={() => setMostrarSenha(!mostrarSenha)}>
+              <Text className="text-sm font-bold" style={{ color: colors.accent }}>
                 {mostrarSenha ? 'Ocultar' : 'Mostrar'}
               </Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity className="items-end mb-6">
-            <Text className="text-manga-orangeDark text-sm font-semibold">Esqueceu a senha?</Text>
-          </TouchableOpacity>
-
           {erro ? (
-            <Text className="text-manga-red text-center mb-4 font-semibold">{erro}</Text>
+            <Text className="text-center mb-4 font-semibold" style={{ color: colors.danger }}>
+              {erro}
+            </Text>
           ) : null}
 
-          <TouchableOpacity 
-            className="bg-manga-orangeDark h-[50px] rounded-lg justify-center items-center" 
-            onPress={handleLogin}
-          >
-            <Text className="text-manga-white text-lg font-bold">Entrar</Text>
-          </TouchableOpacity>
+          <LoadingButton label="Entrar" onPress={handleLogin} loading={carregando} />
 
-          <TouchableOpacity 
-            className="mt-5 items-center" 
-            onPress={() => router.push('/(auth)/cadastro')}
-          >
-            <Text className="text-manga-gray text-sm font-semibold">
-              Não tem uma conta? <Text className="text-manga-orangeDark">Crie aqui.</Text>
+          <TouchableOpacity className="mt-5 items-center" onPress={() => router.push('/(auth)/cadastro')}>
+            <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+              Não tem uma conta? <Text style={{ color: colors.accent }}>Crie aqui.</Text>
             </Text>
           </TouchableOpacity>
         </View>
