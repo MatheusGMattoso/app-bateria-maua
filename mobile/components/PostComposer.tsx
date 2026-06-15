@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import LoadingButton from './LoadingButton';
@@ -12,14 +12,18 @@ type Props = {
   onPublicado: () => void;
 };
 
+type AssetImagem = {
+  uri: string;
+  base64: string;
+  mimeType: string;
+};
+
 export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Props) {
   const { colors } = useTheme();
   const [conteudo, setConteudo] = useState('');
   const [tipo, setTipo] = useState<'post' | 'aviso'>('post');
   const [salvando, setSalvando] = useState(false);
-  const [imagemUri, setImagemUri] = useState<string | null>(null);
-  const [imagemBase64, setImagemBase64] = useState<string | null>(null);
-  const [mimeType, setMimeType] = useState<string | null>(null);
+  const [imagem, setImagem] = useState<AssetImagem | null>(null);
 
   const ehDiretoria = perfilAcesso === 'Administrador' || perfilAcesso === 'Gestor de Módulo';
 
@@ -30,7 +34,19 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
     borderWidth: 1,
   };
 
-  const selecionarImagem = async () => {
+  const aplicarAsset = (asset: ImagePicker.ImagePickerAsset) => {
+    if (!asset.base64) {
+      Alert.alert('Erro', 'Não foi possível processar a imagem. Tente outra foto.');
+      return;
+    }
+    setImagem({
+      uri: asset.uri,
+      base64: asset.base64,
+      mimeType: asset.mimeType || 'image/jpeg',
+    });
+  };
+
+  const abrirGaleria = async () => {
     const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissao.granted) {
       Alert.alert('Permissão necessária', 'Permita o acesso à galeria para anexar fotos.');
@@ -38,29 +54,55 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
     }
 
     const resultado = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 0.7,
+      quality: 0.55,
       base64: true,
+      exif: false,
     });
 
     if (!resultado.canceled && resultado.assets[0]) {
-      const asset = resultado.assets[0];
-      setImagemUri(asset.uri);
-      setImagemBase64(asset.base64 || null);
-      setMimeType(asset.mimeType || 'image/jpeg');
+      aplicarAsset(resultado.assets[0]);
     }
   };
 
-  const removerImagem = () => {
-    setImagemUri(null);
-    setImagemBase64(null);
-    setMimeType(null);
+  const abrirCamera = async () => {
+    const permissao = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissao.granted) {
+      Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar fotos.');
+      return;
+    }
+
+    const resultado = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.55,
+      base64: true,
+      exif: false,
+    });
+
+    if (!resultado.canceled && resultado.assets[0]) {
+      aplicarAsset(resultado.assets[0]);
+    }
   };
 
+  const selecionarImagem = () => {
+    if (Platform.OS === 'web') {
+      abrirGaleria();
+      return;
+    }
+
+    Alert.alert('Adicionar foto', 'Escolha de onde enviar a imagem', [
+      { text: 'Galeria', onPress: abrirGaleria },
+      { text: 'Câmera', onPress: abrirCamera },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
+  const removerImagem = () => setImagem(null);
+
   const publicar = async () => {
-    if (!conteudo.trim()) {
-      Alert.alert('Conteúdo vazio', 'Escreva algo antes de publicar.');
+    if (!conteudo.trim() && !imagem) {
+      Alert.alert('Publicação vazia', 'Escreva algo ou anexe uma foto antes de publicar.');
       return;
     }
 
@@ -68,13 +110,13 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
       setSalvando(true);
       let imagemUrl: string | null = null;
 
-      if (imagemBase64) {
+      if (imagem) {
         const upload = await fetchJson(`${BASE_URL}/feed/upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            imagem_base64: imagemBase64,
-            mime_type: mimeType,
+            imagem_base64: imagem.base64,
+            mime_type: imagem.mimeType,
             nome_arquivo: 'feed',
           }),
         });
@@ -148,9 +190,9 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
         numberOfLines={4}
       />
 
-      {imagemUri ? (
+      {imagem ? (
         <View className="mb-3 relative">
-          <Image source={{ uri: imagemUri }} className="w-full rounded-xl" style={{ height: 160 }} resizeMode="cover" />
+          <Image source={{ uri: imagem.uri }} className="w-full rounded-xl" style={{ height: 180 }} resizeMode="cover" />
           <TouchableOpacity
             onPress={removerImagem}
             className="absolute top-2 right-2 w-8 h-8 rounded-full items-center justify-center"
@@ -164,20 +206,21 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
       <View className="flex-row items-center justify-between">
         <TouchableOpacity
           onPress={selecionarImagem}
+          disabled={salvando}
           className="px-3 py-2 rounded-xl"
-          style={{ backgroundColor: colors.backgroundAlt, borderWidth: 1, borderColor: colors.border }}
+          style={{
+            backgroundColor: colors.backgroundAlt,
+            borderWidth: 1,
+            borderColor: colors.border,
+            opacity: salvando ? 0.6 : 1,
+          }}
         >
           <Text className="text-xs font-bold" style={{ color: colors.textSecondary }}>
-            📷 Foto
+            📷 {imagem ? 'Trocar foto' : 'Adicionar foto'}
           </Text>
         </TouchableOpacity>
 
-        <LoadingButton
-          label="Publicar"
-          onPress={publicar}
-          loading={salvando}
-          className="px-6"
-        />
+        <LoadingButton label="Publicar" onPress={publicar} loading={salvando} className="px-6" />
       </View>
     </View>
   );

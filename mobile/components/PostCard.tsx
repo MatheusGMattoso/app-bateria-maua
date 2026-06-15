@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { abreviarPerfil } from '../utils/responsive';
@@ -125,7 +126,8 @@ export default function PostCard({
           source={{ uri: post.imagem_url }}
           className="w-full rounded-xl mt-3"
           style={{ height: compacto ? 160 : 220 }}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={200}
         />
       ) : null}
 

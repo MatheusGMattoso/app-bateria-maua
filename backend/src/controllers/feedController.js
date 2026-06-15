@@ -145,10 +145,15 @@ exports.uploadImagem = async (req, res) => {
       return res.status(400).json({ erro: 'Imagem muito grande. Maximo 5MB.' });
     }
 
+    const protocolo = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocolo}://${host}`;
+
     const resultado = await feedService.uploadImagem({
       buffer,
       mimeType: mime_type,
       nomeArquivo: nome_arquivo,
+      baseUrl,
     });
 
     res.status(200).json(resultado);

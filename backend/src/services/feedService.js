@@ -1,8 +1,11 @@
 const supabase = require('../config/supabase');
+const fs = require('fs');
+const path = require('path');
 
 const PERFIS_DIRETORIA = ['Administrador', 'Gestor de Módulo'];
 const EMOJIS_VALIDOS = ['🥭', '🥁', '🔥'];
 const BUCKET_IMAGENS = 'feed-imagens';
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'feed');
 
 function ehDiretoria(perfilAcesso) {
   return PERFIS_DIRETORIA.includes(perfilAcesso);
@@ -156,8 +159,9 @@ async function listarFeed({ page = 1, limit = 20, leitor_id: leitorId } = {}) {
 }
 
 async function criarPublicacao({ autor_id, conteudo, tipo, perfil_acesso, imagem_url }) {
-  if (!autor_id || !conteudo?.trim()) {
-    throw criarErro('autor_id e conteudo sao obrigatorios.');
+  const texto = conteudo?.trim() || '';
+  if (!autor_id || (!texto && !imagem_url)) {
+    throw criarErro('Informe um texto ou anexe uma foto.');
   }
 
   const tipoNormalizado = tipo === 'aviso' ? 'aviso' : 'post';
@@ -168,7 +172,7 @@ async function criarPublicacao({ autor_id, conteudo, tipo, perfil_acesso, imagem
 
   const payload = {
     autor_id,
-    conteudo: conteudo.trim(),
+    conteudo: texto || '📷',
     tipo: tipoNormalizado,
     fixado: false,
     imagem_url: imagem_url || null,
@@ -368,20 +372,38 @@ async function excluirComentario({ comentario_id, solicitante_id, perfil_acesso 
   return { mensagem: 'Comentario removido.' };
 }
 
-async function uploadImagem({ buffer, mimeType, nomeArquivo }) {
-  const extensao = mimeType?.includes('png') ? 'png' : 'jpg';
+function garantirPastaUpload() {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+}
+
+function salvarImagemLocal({ buffer, mimeType, nomeArquivo }) {
+  garantirPastaUpload();
+  const extensao = mimeType?.includes('png') ? 'png' : mimeType?.includes('webp') ? 'webp' : 'jpg';
+  const caminho = `${Date.now()}_${nomeArquivo || 'imagem'}.${extensao}`;
+  const caminhoCompleto = path.join(UPLOAD_DIR, caminho);
+  fs.writeFileSync(caminhoCompleto, buffer);
+  return caminho;
+}
+
+async function uploadImagem({ buffer, mimeType, nomeArquivo, baseUrl }) {
+  const extensao = mimeType?.includes('png') ? 'png' : mimeType?.includes('webp') ? 'webp' : 'jpg';
   const caminho = `${Date.now()}_${nomeArquivo || 'imagem'}.${extensao}`;
 
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from(BUCKET_IMAGENS)
     .upload(caminho, buffer, { contentType: mimeType || 'image/jpeg', upsert: false });
 
-  if (error) {
-    throw criarErro(`Falha no upload da imagem: ${error.message}`, 500);
+  if (!error) {
+    const { data: urlData } = supabase.storage.from(BUCKET_IMAGENS).getPublicUrl(caminho);
+    return { imagem_url: urlData.publicUrl };
   }
 
-  const { data: urlData } = supabase.storage.from(BUCKET_IMAGENS).getPublicUrl(data.path);
-  return { imagem_url: urlData.publicUrl };
+  console.warn('Supabase Storage indisponivel, usando armazenamento local:', error.message);
+  const arquivoLocal = salvarImagemLocal({ buffer, mimeType, nomeArquivo });
+  const host = baseUrl || 'http://localhost:3000';
+  return { imagem_url: `${host}/uploads/feed/${arquivoLocal}` };
 }
 
 module.exports = {
