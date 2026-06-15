@@ -7,7 +7,8 @@
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:setup-eventos": "node scripts/setup-eventos-table.js",
-    "db:verify-eventos": "node scripts/verify-eventos-db.js"
+    "db:verify-eventos": "node scripts/verify-eventos-db.js",
+    "db:setup-feed": "node scripts/setup-feed-table.js"
   },
   "keywords": [],
   "author": "",

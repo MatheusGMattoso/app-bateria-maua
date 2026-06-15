@@ -4,15 +4,21 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/api';
+import { fetchJson } from '../../utils/apiClient';
+import { useTheme } from '../../context/ThemeContext';
+import ScreenHeader from '../../components/ScreenHeader';
+import EmptyState from '../../components/EmptyState';
+import ThemeToggle from '../../components/ThemeToggle';
+import { useResponsive } from '../../utils/responsive';
 
 type Evento = {
   id?: string;
@@ -26,7 +32,7 @@ type Evento = {
 const NOMES_MESES = [
   'Janeiro',
   'Fevereiro',
-  'Marco',
+  'Março',
   'Abril',
   'Maio',
   'Junho',
@@ -39,13 +45,6 @@ const NOMES_MESES = [
 ];
 
 const NOMES_DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-function formatDateKey(date: Date) {
-  const ano = date.getFullYear();
-  const mes = `${date.getMonth() + 1}`.padStart(2, '0');
-  const dia = `${date.getDate()}`.padStart(2, '0');
-  return `${ano}-${mes}-${dia}`;
-}
 
 function formatTimeKey(date: Date) {
   const hora = `${date.getHours()}`.padStart(2, '0');
@@ -60,6 +59,8 @@ function formatarDataExibicao(dataStr: string) {
 
 export default function CalendarioScreen() {
   const hoje = new Date();
+  const { colors, isDark } = useTheme();
+  const { screenPadding, isSmall, width } = useResponsive();
   const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
   const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth());
   const [diaSelecionado, setDiaSelecionado] = useState<number | null>(null);
@@ -70,6 +71,7 @@ export default function CalendarioScreen() {
   const [descricao, setDescricao] = useState('');
   const [horarioEvento, setHorarioEvento] = useState(formatTimeKey(hoje));
   const [formularioAberto, setFormularioAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
 
   const formAnimacao = useRef(new Animated.Value(0)).current;
   const diaAnimacao = useRef(new Animated.Value(0)).current;
@@ -81,11 +83,8 @@ export default function CalendarioScreen() {
   useEffect(() => {
     const carregarUsuario = async () => {
       const usuarioStorage = await AsyncStorage.getItem('usuario');
-      if (usuarioStorage) {
-        setUsuario(JSON.parse(usuarioStorage));
-      }
+      if (usuarioStorage) setUsuario(JSON.parse(usuarioStorage));
     };
-
     carregarUsuario();
   }, []);
 
@@ -115,9 +114,7 @@ export default function CalendarioScreen() {
       useNativeDriver: false,
     }).start(() => {
       if (abrindo) {
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
       }
     });
   };
@@ -125,13 +122,7 @@ export default function CalendarioScreen() {
   const buscarEventos = async () => {
     try {
       setCarregando(true);
-      const resposta = await fetch(`${BASE_URL}/eventos?ano=${anoSelecionado}`);
-      const dados = await resposta.json();
-
-      if (!resposta.ok) {
-        throw new Error(dados.erro || 'Nao foi possivel carregar os eventos.');
-      }
-
+      const dados = await fetchJson(`${BASE_URL}/eventos?ano=${anoSelecionado}`);
       setEventos(dados.eventos || []);
     } catch (error: any) {
       Alert.alert('Erro', error.message);
@@ -146,17 +137,18 @@ export default function CalendarioScreen() {
 
   const agendarEvento = async () => {
     if (!titulo || !dataSelecionada || !horarioEvento) {
-      Alert.alert('Campos obrigatorios', 'Preencha titulo e horario do evento.');
+      Alert.alert('Campos obrigatórios', 'Preencha título e horário do evento.');
       return;
     }
 
     if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(horarioEvento)) {
-      Alert.alert('Horario invalido', 'Use o formato HH:MM (ex: 19:30).');
+      Alert.alert('Horário inválido', 'Use o formato HH:MM (ex: 19:30).');
       return;
     }
 
     try {
-      const resposta = await fetch(`${BASE_URL}/eventos`, {
+      setSalvando(true);
+      await fetchJson(`${BASE_URL}/eventos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,12 +161,6 @@ export default function CalendarioScreen() {
         }),
       });
 
-      const dados = await resposta.json();
-
-      if (!resposta.ok) {
-        throw new Error(dados.erro || 'Nao foi possivel agendar o evento.');
-      }
-
       Alert.alert('Sucesso', 'Evento agendado com sucesso.');
       setTitulo('');
       setDescricao('');
@@ -184,20 +170,20 @@ export default function CalendarioScreen() {
       buscarEventos();
     } catch (error: any) {
       Alert.alert('Erro', error.message);
+    } finally {
+      setSalvando(false);
     }
   };
 
   const eventosPorData = useMemo(() => {
     return eventos.reduce((acc: Record<string, Evento[]>, evento) => {
-      if (!acc[evento.data_evento]) {
-        acc[evento.data_evento] = [];
-      }
+      if (!acc[evento.data_evento]) acc[evento.data_evento] = [];
       acc[evento.data_evento].push(evento);
       return acc;
     }, {});
   }, [eventos]);
 
-  const eventosDoDia = dataSelecionada ? (eventosPorData[dataSelecionada] || []) : [];
+  const eventosDoDia = dataSelecionada ? eventosPorData[dataSelecionada] || [] : [];
 
   const primeiroDiaDoMes = new Date(anoSelecionado, mesSelecionado, 1);
   const totalDiasNoMes = new Date(anoSelecionado, mesSelecionado + 1, 0).getDate();
@@ -227,39 +213,35 @@ export default function CalendarioScreen() {
   };
 
   const selecionarDia = (dia: number) => {
-    if (diaSelecionado === dia) {
-      setDiaSelecionado(null);
-      setFormularioAberto(false);
-      formAnimacao.setValue(0);
-    } else {
-      setDiaSelecionado(dia);
-      setFormularioAberto(false);
-      formAnimacao.setValue(0);
-    }
+    setDiaSelecionado(diaSelecionado === dia ? null : dia);
+    setFormularioAberto(false);
+    formAnimacao.setValue(0);
   };
 
-  const formMaxHeight = formAnimacao.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 400],
-  });
+  const formMaxHeight = formAnimacao.interpolate({ inputRange: [0, 1], outputRange: [0, 400] });
+  const formOpacity = formAnimacao.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
+  const diaSecaoScale = diaAnimacao.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] });
+  const diaSecaoOpacity = diaAnimacao.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
-  const formOpacity = formAnimacao.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 0, 1],
-  });
+  const sombraCard = {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.25 : 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  };
 
-  const diaSecaoScale = diaAnimacao.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.95, 1],
-  });
+  const estiloInput = {
+    backgroundColor: colors.backgroundAlt,
+    borderColor: colors.border,
+    color: colors.textPrimary,
+    borderWidth: 1,
+  };
 
-  const diaSecaoOpacity = diaAnimacao.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
+  const larguraCelula = Math.floor((width - screenPadding * 2 - 32) / 7);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#f5f5f5]">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -267,200 +249,248 @@ export default function CalendarioScreen() {
       >
         <ScrollView
           ref={scrollViewRef}
-          contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
+          contentContainerStyle={{ padding: screenPadding, paddingBottom: 60 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-        <View className="mb-6 mt-4">
-          <Text className="text-2xl font-bold text-[#333]">Calendario</Text>
-          <Text className="text-sm text-manga-gray font-semibold">
-            Visualize todas as datas do ano e eventos agendados pela administracao.
-          </Text>
-        </View>
+          <ScreenHeader
+            title="Calendário"
+            subtitle="Datas do ano e eventos agendados pela administração."
+            right={<ThemeToggle />}
+          />
 
-        <View className="bg-manga-white rounded-2xl border border-[#e0e0e0] p-4 mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
-          <View className="flex-row justify-between items-center mb-4">
-            <TouchableOpacity onPress={() => mudarMes(-1)} className="w-10 h-10 rounded-full bg-[#fff3eb] items-center justify-center">
-              <Text className="text-manga-orangeDark font-bold text-lg">{'<'}</Text>
-            </TouchableOpacity>
-            <Text className="text-lg font-bold text-[#333]">
-              {NOMES_MESES[mesSelecionado]} {anoSelecionado}
-            </Text>
-            <TouchableOpacity onPress={() => mudarMes(1)} className="w-10 h-10 rounded-full bg-[#fff3eb] items-center justify-center">
-              <Text className="text-manga-orangeDark font-bold text-lg">{'>'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="flex-row justify-between mb-2">
-            {NOMES_DIAS.map((dia, index) => (
-              <Text key={`dia-semana-${index}`} className="w-[13%] text-center text-manga-gray font-bold text-xs">
-                {dia}
+          <View
+            className="rounded-2xl p-4 mb-5"
+            style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
+          >
+            <View className="flex-row justify-between items-center mb-4">
+              <TouchableOpacity
+                onPress={() => mudarMes(-1)}
+                className="w-10 h-10 rounded-full items-center justify-center"
+                style={{ backgroundColor: colors.accentSoft }}
+              >
+                <Text className="font-bold text-lg" style={{ color: colors.accent }}>
+                  {'<'}
+                </Text>
+              </TouchableOpacity>
+              <Text
+                className={`${isSmall ? 'text-base' : 'text-lg'} font-bold text-center flex-1 px-2`}
+                style={{ color: colors.textPrimary }}
+                numberOfLines={1}
+              >
+                {NOMES_MESES[mesSelecionado]} {anoSelecionado}
               </Text>
-            ))}
-          </View>
+              <TouchableOpacity
+                onPress={() => mudarMes(1)}
+                className="w-10 h-10 rounded-full items-center justify-center"
+                style={{ backgroundColor: colors.accentSoft }}
+              >
+                <Text className="font-bold text-lg" style={{ color: colors.accent }}>
+                  {'>'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          <View className="flex-row flex-wrap justify-between">
-            {diasCalendario.map((dia, index) => {
-              if (!dia) {
-                return <View key={`vazio-${index}`} className="w-[13%] h-10 mb-2" />;
-              }
-
-              const data = `${anoSelecionado}-${`${mesSelecionado + 1}`.padStart(2, '0')}-${`${dia}`.padStart(2, '0')}`;
-              const temEvento = Boolean(eventosPorData[data]?.length);
-              const selecionado = dia === diaSelecionado;
-              const ehHoje = dia === hoje.getDate() && mesSelecionado === hoje.getMonth() && anoSelecionado === hoje.getFullYear();
-
-              return (
-                <TouchableOpacity
-                  key={data}
-                  className={`w-[13%] h-10 mb-2 rounded-lg items-center justify-center ${
-                    selecionado ? 'bg-manga-orangeDark' : ehHoje ? 'bg-[#fff3eb]' : 'bg-[#f5f5f5]'
-                  }`}
-                  onPress={() => selecionarDia(dia)}
-                  activeOpacity={0.7}
+            <View className="flex-row mb-2">
+              {NOMES_DIAS.map((dia, index) => (
+                <Text
+                  key={`dia-semana-${index}`}
+                  className="text-center font-bold text-xs"
+                  style={{ color: colors.textSecondary, width: larguraCelula }}
                 >
-                  <Text className={`${selecionado ? 'text-white' : ehHoje ? 'text-manga-orangeDark' : 'text-[#333]'} font-semibold text-xs`}>
-                    {dia}
-                  </Text>
-                  {temEvento && <View className={`w-1.5 h-1.5 rounded-full mt-0.5 ${selecionado ? 'bg-white' : 'bg-manga-orangeDark'}`} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+                  {isSmall ? dia.charAt(0) : dia}
+                </Text>
+              ))}
+            </View>
 
-        {diaSelecionado !== null && dataSelecionada && (
-          <Animated.View style={{ opacity: diaSecaoOpacity, transform: [{ scale: diaSecaoScale }] }}>
-            <View className="bg-manga-white rounded-2xl border border-[#e0e0e0] p-5 mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
-              <View className="flex-row items-center justify-between mb-4">
-                <View className="flex-row items-center">
-                  <View className="w-10 h-10 rounded-full bg-manga-orangeDark items-center justify-center mr-3">
-                    <Text className="text-white font-bold text-sm">{diaSelecionado}</Text>
-                  </View>
-                  <View>
-                    <Text className="text-base font-bold text-[#333]">
-                      {formatarDataExibicao(dataSelecionada)}
+            <View className="flex-row flex-wrap">
+              {diasCalendario.map((dia, index) => {
+                if (!dia) return <View key={`vazio-${index}`} style={{ width: larguraCelula, height: 40, marginBottom: 8 }} />;
+
+                const data = `${anoSelecionado}-${`${mesSelecionado + 1}`.padStart(2, '0')}-${`${dia}`.padStart(2, '0')}`;
+                const temEvento = Boolean(eventosPorData[data]?.length);
+                const selecionado = dia === diaSelecionado;
+                const ehHoje =
+                  dia === hoje.getDate() &&
+                  mesSelecionado === hoje.getMonth() &&
+                  anoSelecionado === hoje.getFullYear();
+
+                const fundo = selecionado ? colors.accent : ehHoje ? colors.accentSoft : colors.backgroundAlt;
+                const corTexto = selecionado ? colors.onAccent : ehHoje ? colors.accent : colors.textPrimary;
+
+                return (
+                  <TouchableOpacity
+                    key={data}
+                    className="rounded-xl items-center justify-center"
+                    style={{ width: larguraCelula, height: 40, marginBottom: 8, backgroundColor: fundo }}
+                    onPress={() => selecionarDia(dia)}
+                    activeOpacity={0.7}
+                  >
+                    <Text className="font-semibold text-xs" style={{ color: corTexto }}>
+                      {dia}
                     </Text>
-                    <Text className="text-xs text-manga-gray">
-                      {NOMES_DIAS[new Date(anoSelecionado, mesSelecionado, diaSelecionado).getDay()]}
-                      {', '}
-                      {NOMES_MESES[mesSelecionado]}
-                    </Text>
+                    {temEvento && (
+                      <View
+                        className="w-1.5 h-1.5 rounded-full mt-0.5"
+                        style={{ backgroundColor: selecionado ? colors.onAccent : colors.accent }}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {diaSelecionado !== null && dataSelecionada && (
+            <Animated.View style={{ opacity: diaSecaoOpacity, transform: [{ scale: diaSecaoScale }] }}>
+              <View
+                className="rounded-2xl p-5 mb-5"
+                style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
+              >
+                <View className="flex-row items-center justify-between mb-4">
+                  <View className="flex-row items-center">
+                    <View
+                      className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                      style={{ backgroundColor: colors.accent }}
+                    >
+                      <Text className="font-bold text-sm" style={{ color: colors.onAccent }}>
+                        {diaSelecionado}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>
+                        {formatarDataExibicao(dataSelecionada)}
+                      </Text>
+                      <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                        {NOMES_DIAS[new Date(anoSelecionado, mesSelecionado, diaSelecionado).getDay()]}
+                        {', '}
+                        {NOMES_MESES[mesSelecionado]}
+                      </Text>
+                    </View>
                   </View>
+                  {eventosDoDia.length > 0 && (
+                    <View className="px-3 py-1 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+                      <Text className="text-xs font-bold" style={{ color: colors.accent }}>
+                        {eventosDoDia.length} evento{eventosDoDia.length > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                {eventosDoDia.length > 0 && (
-                  <View className="bg-[#fff3eb] px-3 py-1 rounded-full">
-                    <Text className="text-manga-orangeDark text-xs font-bold">
-                      {eventosDoDia.length} evento{eventosDoDia.length > 1 ? 's' : ''}
-                    </Text>
+
+                {carregando ? (
+                  <Text className="text-center py-4" style={{ color: colors.textSecondary }}>
+                    Carregando eventos...
+                  </Text>
+                ) : eventosDoDia.length === 0 ? (
+                  <EmptyState icon="📅" title="Nenhum evento agendado" message="Não há eventos para esta data." />
+                ) : (
+                  eventosDoDia.map((evento, index) => (
+                    <View key={`${evento.id || evento.titulo}-${index}`} className="flex-row items-start mb-3">
+                      <View
+                        className="w-1 rounded-full mr-3 mt-1"
+                        style={{ height: '100%', minHeight: 40, backgroundColor: colors.accent }}
+                      />
+                      <View className="flex-1 p-3 rounded-xl" style={{ backgroundColor: colors.backgroundAlt }}>
+                        <Text className="font-bold text-sm" style={{ color: colors.textPrimary }}>
+                          {evento.titulo}
+                        </Text>
+                        {evento.horario_evento && (
+                          <Text className="text-xs font-semibold mt-1" style={{ color: colors.accent }}>
+                            🕐 {evento.horario_evento}
+                          </Text>
+                        )}
+                        {evento.descricao ? (
+                          <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                            {evento.descricao}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))
+                )}
+
+                {ehAdministrador && (
+                  <View className="mt-2">
+                    <TouchableOpacity
+                      className="flex-row items-center justify-center py-3 rounded-xl"
+                      style={{ backgroundColor: formularioAberto ? colors.backgroundAlt : colors.accent }}
+                      onPress={toggleFormulario}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        className="font-bold text-sm"
+                        style={{ color: formularioAberto ? colors.textSecondary : colors.onAccent }}
+                      >
+                        {formularioAberto ? '✕  Cancelar' : '+  Agendar evento neste dia'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <Animated.View style={{ maxHeight: formMaxHeight, opacity: formOpacity, overflow: 'hidden' }}>
+                      <View className="mt-4">
+                        <Text className="text-xs font-semibold mb-1 ml-1" style={{ color: colors.textSecondary }}>
+                          TÍTULO
+                        </Text>
+                        <TextInput
+                          className="h-[46px] rounded-xl px-4 mb-3"
+                          style={estiloInput}
+                          placeholder="Nome do evento"
+                          placeholderTextColor={colors.textMuted}
+                          value={titulo}
+                          onChangeText={setTitulo}
+                          onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
+                        />
+
+                        <Text className="text-xs font-semibold mb-1 ml-1" style={{ color: colors.textSecondary }}>
+                          HORÁRIO
+                        </Text>
+                        <TextInput
+                          className="h-[46px] rounded-xl px-4 mb-3"
+                          style={estiloInput}
+                          placeholder="HH:MM (ex: 19:30)"
+                          placeholderTextColor={colors.textMuted}
+                          value={horarioEvento}
+                          onChangeText={setHorarioEvento}
+                          keyboardType="numbers-and-punctuation"
+                          onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
+                        />
+
+                        <Text className="text-xs font-semibold mb-1 ml-1" style={{ color: colors.textSecondary }}>
+                          DESCRIÇÃO (OPCIONAL)
+                        </Text>
+                        <TextInput
+                          className="rounded-xl px-4 py-3 mb-4"
+                          style={{ ...estiloInput, minHeight: 70, textAlignVertical: 'top' }}
+                          placeholder="Detalhes sobre o evento..."
+                          placeholderTextColor={colors.textMuted}
+                          value={descricao}
+                          onChangeText={setDescricao}
+                          multiline
+                          numberOfLines={3}
+                          onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
+                        />
+
+                        <TouchableOpacity
+                          className="h-[48px] rounded-xl items-center justify-center"
+                          style={{ backgroundColor: colors.accent, opacity: salvando ? 0.6 : 1 }}
+                          onPress={agendarEvento}
+                          disabled={salvando}
+                          activeOpacity={0.8}
+                        >
+                          <Text className="font-bold text-sm" style={{ color: colors.onAccent }}>
+                            {salvando ? 'Salvando...' : 'Salvar evento'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </Animated.View>
                   </View>
                 )}
               </View>
+            </Animated.View>
+          )}
 
-              {carregando ? (
-                <Text className="text-manga-gray text-center py-4">Carregando eventos...</Text>
-              ) : eventosDoDia.length === 0 ? (
-                <View className="items-center py-6">
-                  <Text className="text-3xl mb-2">📅</Text>
-                  <Text className="text-manga-gray text-sm text-center">
-                    Nenhum evento agendado{'\n'}para esta data.
-                  </Text>
-                </View>
-              ) : (
-                eventosDoDia.map((evento, index) => (
-                  <View
-                    key={`${evento.id || evento.titulo}-${index}`}
-                    className="flex-row items-start mb-3"
-                  >
-                    <View className="w-1 rounded-full bg-manga-orangeDark mr-3 mt-1" style={{ height: '100%', minHeight: 40 }} />
-                    <View className="flex-1 bg-[#fafafa] p-3 rounded-xl">
-                      <Text className="font-bold text-[#333] text-sm">{evento.titulo}</Text>
-                      {evento.horario_evento && (
-                        <Text className="text-xs text-manga-orangeDark font-semibold mt-1">
-                          🕐 {evento.horario_evento}
-                        </Text>
-                      )}
-                      {evento.descricao ? (
-                        <Text className="text-xs text-manga-gray mt-1">{evento.descricao}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                ))
-              )}
-
-              {ehAdministrador && (
-                <View className="mt-2">
-                  <TouchableOpacity
-                    className={`flex-row items-center justify-center py-3 rounded-xl ${
-                      formularioAberto ? 'bg-[#f5f5f5]' : 'bg-manga-orangeDark'
-                    }`}
-                    onPress={toggleFormulario}
-                    activeOpacity={0.8}
-                  >
-                    <Text className={`font-bold text-sm ${formularioAberto ? 'text-manga-gray' : 'text-white'}`}>
-                      {formularioAberto ? '✕  Cancelar' : '+  Agendar evento neste dia'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <Animated.View style={{ maxHeight: formMaxHeight, opacity: formOpacity, overflow: 'hidden' }}>
-                    <View className="mt-4">
-                      <Text className="text-xs text-manga-gray font-semibold mb-1 ml-1">TÍTULO</Text>
-                      <TextInput
-                        className="bg-[#f9f9f9] h-[46px] rounded-xl px-4 mb-3 border border-[#e8e8e8] text-[#333]"
-                        placeholder="Nome do evento"
-                        placeholderTextColor="#aaa"
-                        value={titulo}
-                        onChangeText={setTitulo}
-                        onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
-                      />
-
-                      <Text className="text-xs text-manga-gray font-semibold mb-1 ml-1">HORÁRIO</Text>
-                      <TextInput
-                        className="bg-[#f9f9f9] h-[46px] rounded-xl px-4 mb-3 border border-[#e8e8e8] text-[#333]"
-                        placeholder="HH:MM (ex: 19:30)"
-                        placeholderTextColor="#aaa"
-                        value={horarioEvento}
-                        onChangeText={setHorarioEvento}
-                        keyboardType="numbers-and-punctuation"
-                        onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
-                      />
-
-                      <Text className="text-xs text-manga-gray font-semibold mb-1 ml-1">DESCRIÇÃO (OPCIONAL)</Text>
-                      <TextInput
-                        className="bg-[#f9f9f9] rounded-xl px-4 py-3 mb-4 border border-[#e8e8e8] text-[#333]"
-                        placeholder="Detalhes sobre o evento..."
-                        placeholderTextColor="#aaa"
-                        value={descricao}
-                        onChangeText={setDescricao}
-                        multiline
-                        numberOfLines={3}
-                        style={{ minHeight: 70, textAlignVertical: 'top' }}
-                        onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
-                      />
-
-                      <TouchableOpacity
-                        className="bg-manga-orangeDark h-[48px] rounded-xl items-center justify-center"
-                        onPress={agendarEvento}
-                        activeOpacity={0.8}
-                      >
-                        <Text className="text-white font-bold text-sm">Salvar evento</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </Animated.View>
-                </View>
-              )}
-            </View>
-          </Animated.View>
-        )}
-
-        {diaSelecionado === null && (
-          <View className="items-center py-8">
-            <Text className="text-4xl mb-3">👆</Text>
-            <Text className="text-manga-gray text-sm text-center font-semibold">
-              Selecione um dia no calendario{'\n'}para ver os eventos.
-            </Text>
-          </View>
-        )}
+          {diaSelecionado === null && (
+            <EmptyState icon="👆" title="Selecione um dia no calendário" message="Toque em uma data para ver os eventos." />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

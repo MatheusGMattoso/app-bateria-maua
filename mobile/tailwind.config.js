@@ -14,8 +14,14 @@ module.exports = {
           green: '#7A8836',
           gray: '#4B4A4A',
           white: '#FDFDFD',
-          black: '#000000'
-        }
+          black: '#000000',
+          gold: '#F4B400'
+        },
+        surface: '#FFF8F1',
+        card: '#FFFFFF',
+        border: '#F1E2D3',
+        textPrimary: '#2A1E14',
+        accentSoft: '#FFF1E4'
       }
     },
   },

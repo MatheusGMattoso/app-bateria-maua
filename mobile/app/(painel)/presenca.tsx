@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/api';
+import { fetchJson } from '../../utils/apiClient';
+import { useTheme } from '../../context/ThemeContext';
+import ScreenHeader from '../../components/ScreenHeader';
+import ThemeToggle from '../../components/ThemeToggle';
+import GamificationCelebration, { GamificacaoFeedback } from '../../components/GamificationCelebration';
+import { useResponsive } from '../../utils/responsive';
 
 export default function PresencaScreen() {
   const [permissao, solicitarPermissao] = useCameraPermissions();
@@ -13,40 +20,42 @@ export default function PresencaScreen() {
   const [perfil, setPerfil] = useState('Membro');
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
   const [resumo, setResumo] = useState({ presencas: 0, faltas: 0, frequencia: 0 });
+  const [carregandoResumo, setCarregandoResumo] = useState(true);
+  const [celebracao, setCelebracao] = useState<GamificacaoFeedback | null>(null);
   const jaLeuRef = useRef(false);
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const { screenPadding, isSmall } = useResponsive();
 
   const carregarResumo = async (id: string) => {
     try {
-      const resposta = await fetch(`${BASE_URL}/presencas/resumo/${id}`);
-      if (resposta.ok) {
-        const dados = await resposta.json();
-        setResumo(dados);
-      }
+      setCarregandoResumo(true);
+      const dados = await fetchJson(`${BASE_URL}/presencas/resumo/${id}`);
+      setResumo(dados);
     } catch (error) {
-      console.error("Erro ao carregar resumo:", error);
+      console.error('Erro ao carregar resumo:', error);
+    } finally {
+      setCarregandoResumo(false);
     }
-  }
+  };
 
   const baixarRelatorioPAE = async () => {
     const url = `${BASE_URL}/presencas/relatorio/aprovados`;
-
     try {
       if (Platform.OS === 'web') {
         window.open(url, '_blank');
       } else {
-        const fileUri = `${FileSystem.documentDirectory}horas_pae_aprovados.csv`; 
+        const fileUri = `${FileSystem.documentDirectory}horas_pae_aprovados.csv`;
         const downloadResult = await FileSystem.downloadAsync(url, fileUri);
-        
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(downloadResult.uri);
         } else {
-          Alert.alert("Aviso", "O compartilhamento não está disponível neste dispositivo.");
+          Alert.alert('Aviso', 'O compartilhamento não está disponível neste dispositivo.');
         }
       }
     } catch (error) {
-      console.error("Erro ao baixar o relatório:", error);
-      Alert.alert("Erro", "Não foi possível gerar a planilha de horas PAE.");
+      console.error('Erro ao baixar o relatório:', error);
+      Alert.alert('Erro', 'Não foi possível gerar a planilha de horas PAE.');
     }
   };
 
@@ -58,6 +67,8 @@ export default function PresencaScreen() {
         setPerfil(usuario.perfil_acesso);
         setUsuarioId(usuario.id);
         carregarResumo(usuario.id);
+      } else {
+        setCarregandoResumo(false);
       }
     };
     carregarUsuario();
@@ -65,84 +76,52 @@ export default function PresencaScreen() {
 
   const lidarComQrCodeLido = ({ data }: { data: string }) => {
     if (jaLeuRef.current) return;
-
     jaLeuRef.current = true;
     setEscaneando(false);
-    
-    const titulo = "Confirmar Presença";
-    const mensagem = "Deseja registrar sua presença neste ensaio?";
+
+    const titulo = 'Confirmar Presença';
+    const mensagem = 'Deseja registrar sua presença neste ensaio?';
 
     if (Platform.OS === 'web') {
       const confirmou = window.confirm(`${titulo}\n\n${mensagem}`);
-      if (confirmou) {
-        confirmarPresencaNoBanco(data);
-      } else {
-        jaLeuRef.current = false;
-      }
+      if (confirmou) confirmarPresencaNoBanco(data);
+      else jaLeuRef.current = false;
     } else {
-      Alert.alert(
-        titulo,
-        mensagem,
-        [
-          {
-            text: "Cancelar",
-            style: "cancel",
-            onPress: () => { jaLeuRef.current = false; }
-          },
-          {
-            text: "Sim, Confirmar",
-            onPress: () => confirmarPresencaNoBanco(data)
-          }
-        ]
-      );
+      Alert.alert(titulo, mensagem, [
+        { text: 'Cancelar', style: 'cancel', onPress: () => { jaLeuRef.current = false; } },
+        { text: 'Sim, Confirmar', onPress: () => confirmarPresencaNoBanco(data) },
+      ]);
     }
   };
 
   const confirmarPresencaNoBanco = async (codigo_qr: string) => {
     if (!usuarioId) {
-      const msgErroUsuario = "Usuário não identificado. Faça login novamente.";
-      if (Platform.OS === 'web') {
-        window.alert(`Erro: ${msgErroUsuario}`);
-      } else {
-        Alert.alert("Erro", msgErroUsuario);
-      }
+      const msg = 'Usuário não identificado. Faça login novamente.';
+      Platform.OS === 'web' ? window.alert(`Erro: ${msg}`) : Alert.alert('Erro', msg);
       return;
     }
 
     try {
-      const resposta = await fetch(`${BASE_URL}/presencas`, {
+      const resposta = await fetchJson(`${BASE_URL}/presencas`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          codigo_qr: codigo_qr,
-          membro_id: usuarioId
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo_qr, membro_id: usuarioId }),
       });
 
-      const json = await resposta.json();
+      const gam: GamificacaoFeedback | null = resposta.gamificacao || null;
+      const temCelebracao = gam && (gam.subiuNivel || gam.novasConquistas.length > 0);
 
-      if (!resposta.ok) {
-        throw new Error(json.erro || "Erro ao registrar presença.");
-      }
-
-      const msgSucesso = "Sua presença foi confirmada neste ensaio!";
-      if (Platform.OS === 'web') {
-        window.alert(`Sucesso! ${msgSucesso}`);
+      if (temCelebracao) {
+        setCelebracao(gam);
       } else {
-        Alert.alert("Sucesso!", msgSucesso);
+        const ganho = gam && gam.pontosGanhos > 0 ? ` +${gam.pontosGanhos} pts de manga!` : '';
+        const msgSucesso = `Sua presença foi confirmada neste ensaio!${ganho}`;
+        Platform.OS === 'web' ? window.alert(`Sucesso! ${msgSucesso}`) : Alert.alert('Sucesso!', msgSucesso);
       }
 
       carregarResumo(usuarioId);
-
     } catch (error: any) {
-      if (Platform.OS === 'web') {
-        window.alert("Erro: " + error.message);
-      } else {
-        Alert.alert("Erro", error.message);
-      }
-      
+      Platform.OS === 'web' ? window.alert('Erro: ' + error.message) : Alert.alert('Erro', error.message);
       jaLeuRef.current = false;
     }
   };
@@ -151,7 +130,7 @@ export default function PresencaScreen() {
     if (!permissao?.granted) {
       const resultado = await solicitarPermissao();
       if (!resultado.granted) {
-        Alert.alert("Erro", "É necessário permitir o uso da câmera para ler o QR Code.");
+        Alert.alert('Erro', 'É necessário permitir o uso da câmera para ler o QR Code.');
         return;
       }
     }
@@ -161,80 +140,141 @@ export default function PresencaScreen() {
 
   if (escaneando) {
     return (
-      <View className="flex-1 bg-manga-black">
+      <View className="flex-1" style={{ backgroundColor: '#000' }}>
         <CameraView
           style={StyleSheet.absoluteFillObject}
           facing="back"
           onBarcodeScanned={lidarComQrCodeLido}
-          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         />
-        <TouchableOpacity 
-          className="absolute bottom-10 self-center bg-manga-white px-6 py-3 rounded-full"
+        <TouchableOpacity
+          className="absolute bottom-10 self-center px-6 py-3 rounded-full"
+          style={{ backgroundColor: '#fff' }}
           onPress={() => {
             setEscaneando(false);
             jaLeuRef.current = false;
           }}
         >
-          <Text className="text-manga-red font-bold">Cancelar</Text>
+          <Text className="font-bold" style={{ color: colors.danger }}>
+            Cancelar
+          </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const sombraCard = {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: isDark ? 0.2 : 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  };
+
+  const podeGerir = perfil === 'Gestor de Módulo' || perfil === 'Administrador';
+
   return (
-    <SafeAreaView className="flex-1 bg-[#f5f5f5]">
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        
-        <View className="mb-8 mt-4">
-          <Text className="text-2xl font-bold text-[#333]">Presença</Text>
-          <Text className="text-sm text-manga-gray font-semibold">Acompanhe seu rendimento nos ensaios</Text>
-        </View>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={{ padding: screenPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <ScreenHeader
+          title="Presença"
+          subtitle="Acompanhe seu rendimento nos ensaios."
+          right={<ThemeToggle />}
+        />
 
-        <View className="flex-row justify-between mb-8">
-          <View className="bg-manga-white w-[31%] p-4 rounded-xl shadow-sm border border-[#ddd] items-center">
-            <Text className="text-2xl font-bold text-manga-green">{resumo.presencas}</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Presenças</Text>
-          </View>
-          <View className="bg-manga-white w-[31%] p-4 rounded-xl shadow-sm border border-[#ddd] items-center">
-            <Text className="text-2xl font-bold text-manga-red">{resumo.faltas}</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Faltas</Text>
-          </View>
-          <View className="bg-manga-white w-[31%] p-4 rounded-xl shadow-sm border border-[#ddd] items-center">
-            <Text className="text-2xl font-bold text-manga-orangeDark">{resumo.frequencia}%</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Frequência</Text>
-          </View>
-        </View>
-
-        <Text className="text-lg font-bold text-[#333] mb-4">Registro de Ensaio</Text>
-        
-        {(perfil === 'Membro' || perfil === 'Gestor de Módulo' || perfil === 'Administrador') && (
-          <TouchableOpacity 
-            className="bg-manga-orangeDark p-5 rounded-xl items-center justify-center mb-4 shadow-sm"
-            onPress={iniciarLeitura}
+        {carregandoResumo ? (
+          <View
+            className="rounded-2xl p-6 items-center mb-8"
+            style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
           >
-            <Text className="text-manga-white text-lg font-bold">📷 Ler QR Code</Text>
+            <ActivityIndicator color={colors.accent} />
+            <Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+              Carregando resumo...
+            </Text>
+          </View>
+        ) : (
+          <View className="flex-row mb-8" style={{ gap: isSmall ? 6 : 10 }}>
+            {[
+              { valor: `${resumo.presencas}`, rotulo: 'Presenças', cor: colors.successText },
+              { valor: `${resumo.faltas}`, rotulo: 'Faltas', cor: colors.dangerText },
+              { valor: `${resumo.frequencia}%`, rotulo: 'Frequência', cor: colors.accent },
+            ].map((item) => (
+              <View
+                key={item.rotulo}
+                className={`flex-1 ${isSmall ? 'p-3' : 'p-4'} rounded-2xl items-center min-w-0`}
+                style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...sombraCard }}
+              >
+                <Text className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold`} style={{ color: item.cor }}>
+                  {item.valor}
+                </Text>
+                <Text className="text-[10px] text-center mt-1" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                  {item.rotulo}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {!carregandoResumo && (
+          <TouchableOpacity
+            className="flex-row items-center justify-center py-3 rounded-2xl mb-8"
+            style={{ backgroundColor: colors.accentSoft }}
+            onPress={() => router.push('/(painel)/gamificacao')}
+            activeOpacity={0.85}
+          >
+            <Text className="text-sm font-bold" style={{ color: colors.accent }}>
+              🥭 Ver meu progresso
+            </Text>
           </TouchableOpacity>
         )}
 
-        {(perfil === 'Gestor de Módulo' || perfil === 'Administrador') && (
-          <TouchableOpacity 
-            className="bg-transparent border-2 border-manga-orangeDark p-5 rounded-xl items-center justify-center"
+        <Text className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>
+          Registro de Ensaio
+        </Text>
+
+        <TouchableOpacity
+          className="p-5 rounded-2xl items-center justify-center mb-4"
+          style={{ backgroundColor: colors.accent, ...sombraCard }}
+          onPress={iniciarLeitura}
+          activeOpacity={0.85}
+        >
+          <Text className="text-lg font-bold" style={{ color: colors.onAccent }}>
+            📷 Ler QR Code
+          </Text>
+        </TouchableOpacity>
+
+        {podeGerir && (
+          <TouchableOpacity
+            className="p-5 rounded-2xl items-center justify-center mb-4"
+            style={{ borderWidth: 2, borderColor: colors.accent }}
             onPress={() => router.push('/(painel)/gerar-qrcode')}
+            activeOpacity={0.85}
           >
-            <Text className="text-manga-orangeDark text-lg font-bold">⚙️ Gerar QR Code (Diretoria)</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.accent }}>
+              ⚙️ Gerar QR Code (Diretoria)
+            </Text>
           </TouchableOpacity>
         )}
 
-        {(perfil === 'Gestor de Módulo' || perfil === 'Administrador') && (
-          <TouchableOpacity 
-            className="bg-manga-green p-5 rounded-xl items-center justify-center mt-4 shadow-sm"
+        {podeGerir && (
+          <TouchableOpacity
+            className="p-5 rounded-2xl items-center justify-center"
+            style={{ backgroundColor: colors.success, ...sombraCard }}
             onPress={baixarRelatorioPAE}
+            activeOpacity={0.85}
           >
-            <Text className="text-manga-white text-lg font-bold">📄 Exportar Horas PAE</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.onAccent }}>
+              📄 Exportar Horas PAE
+            </Text>
           </TouchableOpacity>
         )}
-
       </ScrollView>
+
+      <GamificationCelebration
+        visible={celebracao !== null}
+        feedback={celebracao}
+        onClose={() => setCelebracao(null)}
+      />
     </SafeAreaView>
   );
 }
