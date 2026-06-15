@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { BASE_URL } from '../../config/api';
+import { apiFetch } from '../../config/http';
 
 type Membro = {
   id: string;
@@ -50,6 +50,12 @@ export default function MembrosScreen() {
 
   const ehAdministrador = usuario?.perfil_acesso === 'Administrador';
 
+  const encerrarSessao = async () => {
+    await AsyncStorage.multiRemove(['token', 'usuario']);
+    Alert.alert('Sessao expirada', 'Faca login novamente.');
+    router.replace('/(auth)/login');
+  };
+
   useEffect(() => {
     const carregarUsuario = async () => {
       const usuarioStorage = await AsyncStorage.getItem('usuario');
@@ -65,7 +71,13 @@ export default function MembrosScreen() {
   const carregarMembros = async () => {
     try {
       setCarregando(true);
-      const resposta = await fetch(`${BASE_URL}/membros`);
+      const resposta = await apiFetch('/membros');
+
+      if (resposta.status === 401) {
+        await encerrarSessao();
+        return;
+      }
+
       const dados = await resposta.json();
 
       if (!resposta.ok) {
@@ -97,14 +109,15 @@ export default function MembrosScreen() {
 
     try {
       setAtualizandoId(membro.id);
-      const resposta = await fetch(`${BASE_URL}/membros/${membro.id}/perfil`, {
+      const resposta = await apiFetch(`/membros/${membro.id}/perfil`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          perfil_acesso: novoPerfil,
-          solicitante_id: usuario.id,
-        }),
+        body: JSON.stringify({ perfil_acesso: novoPerfil }),
       });
+
+      if (resposta.status === 401) {
+        await encerrarSessao();
+        return;
+      }
 
       const dados = await resposta.json();
 

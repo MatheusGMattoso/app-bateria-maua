@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DashboardScreen() {
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await AsyncStorage.multiRemove(['token', 'usuario']);
     router.replace('/(auth)/login');
   };
 

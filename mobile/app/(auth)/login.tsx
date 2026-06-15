@@ -33,8 +33,9 @@ export default function LoginScreen() {
       const dados = await resposta.json();
 
       if (resposta.ok) {
+        await AsyncStorage.setItem('token', dados.token);
         await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
-        router.replace('/(painel)'); 
+        router.replace('/(painel)');
       } else {
         setErro(dados.message || "Erro ao fazer login.");
       }
