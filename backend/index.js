@@ -4,6 +4,7 @@ const cors = require('cors');
 //Importar rotas
 const membroRoutes = require('./src/routes/membroRoutes');
 const ensaioRoutes = require('./src/routes/ensaioRoutes');
+const eventoRoutes = require('./src/routes/eventoRoutes');
 const presencaRoutes = require('./src/routes/presencaRoutes');
 
 const app = express();
@@ -15,6 +16,9 @@ app.use('/api/membros', membroRoutes);
 
 //Rota Criação de Ensaio
 app.use('/api/ensaios', ensaioRoutes);
+
+//Rota de eventos do calendário
+app.use('/api/eventos', eventoRoutes);
 
 // Rota de Presenças
 app.use('/api/presencas', presencaRoutes);
