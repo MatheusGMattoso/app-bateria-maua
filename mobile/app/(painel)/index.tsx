@@ -1,7 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/api';
+import { fetchJson } from '../../utils/apiClient';
+import { useTheme } from '../../context/ThemeContext';
+import ModuleCard from '../../components/ModuleCard';
+import EmptyState from '../../components/EmptyState';
+import ComingSoonModal from '../../components/ComingSoonModal';
+import ThemeToggle from '../../components/ThemeToggle';
 
 type Evento = {
   id?: string;
@@ -18,6 +26,8 @@ const NOMES_MESES = [
 
 const NOMES_DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
+const MAX_EVENTOS_MURAL = 3;
+
 function formatarDataEvento(dataStr: string) {
   const [ano, mes, dia] = dataStr.split('-').map(Number);
   const data = new Date(ano, mes - 1, dia);
@@ -25,12 +35,21 @@ function formatarDataEvento(dataStr: string) {
   return `${diaSemana}, ${dia} de ${NOMES_MESES[mes - 1]} de ${ano}`;
 }
 
+function primeiroNome(nome?: string) {
+  if (!nome) return 'Ritmista';
+  return nome.trim().split(' ')[0];
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [usuario, setUsuario] = useState<any>(null);
+  const [patrimonioVisivel, setPatrimonioVisivel] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('usuario');
     router.replace('/(auth)/login');
   };
 
@@ -38,12 +57,7 @@ export default function DashboardScreen() {
     try {
       setCarregando(true);
       const anoAtual = new Date().getFullYear();
-      const resposta = await fetch(`${BASE_URL}/eventos?ano=${anoAtual}`);
-      const dados = await resposta.json();
-
-      if (!resposta.ok) {
-        throw new Error(dados.erro || 'Erro ao carregar eventos.');
-      }
+      const dados = await fetchJson(`${BASE_URL}/eventos?ano=${anoAtual}`);
 
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
@@ -60,7 +74,7 @@ export default function DashboardScreen() {
         });
 
       setEventos(proximos);
-    } catch (error) {
+    } catch {
       setEventos([]);
     } finally {
       setCarregando(false);
@@ -69,113 +83,176 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      (async () => {
+        const usuarioStorage = await AsyncStorage.getItem('usuario');
+        if (usuarioStorage) setUsuario(JSON.parse(usuarioStorage));
+      })();
       buscarEventos();
     }, [buscarEventos])
   );
 
+  const perfil = usuario?.perfil_acesso || 'Membro';
+  const eventosMural = eventos.slice(0, MAX_EVENTOS_MURAL);
+
   return (
-    <SafeAreaView className="flex-1 bg-[#f5f5f5]">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        
-        <View className="flex-row justify-between items-center mb-8 mt-4">
-          <View>
-            <Text className="text-2xl font-bold text-[#333]">Olá, Ritmista! 🥁</Text>
-            <Text className="text-sm text-manga-gray font-semibold">Bem-vindo ao Mauá Core</Text>
+        <View className="flex-row justify-between items-center mb-7 mt-1">
+          <View className="flex-1">
+            <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+              Olá, {primeiroNome(usuario?.nome)}! 🥭
+            </Text>
+            <View className="flex-row items-center mt-1">
+              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+                Bem-vindo ao Mauá Core
+              </Text>
+              <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+                <Text className="text-[10px] font-bold" style={{ color: colors.accent }}>
+                  {perfil}
+                </Text>
+              </View>
+            </View>
           </View>
-          <TouchableOpacity 
-            onPress={handleLogout}
-            className="bg-manga-orangeDark px-4 py-2 rounded-lg justify-center items-center"
-          >
-            <Text className="text-manga-white font-bold">Sair</Text>
-          </TouchableOpacity>
+
+          <View className="flex-row items-center">
+            <ThemeToggle />
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="ml-2 px-4 py-2 rounded-full justify-center items-center"
+              style={{ backgroundColor: colors.accent }}
+              activeOpacity={0.85}
+            >
+              <Text className="font-bold" style={{ color: colors.onAccent }}>
+                Sair
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View className="flex-row flex-wrap justify-between">
-          
-          <TouchableOpacity 
-            className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center"
-            onPress={() => router.push('/(painel)/membros')}
-          >
-            <Text className="text-4xl mb-3">👥</Text>
-            <Text className="text-manga-orangeDark font-bold text-lg">Membros</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Gestão da bateria</Text>
-          </TouchableOpacity>
+        <Text className="text-xs font-bold uppercase mb-3 ml-1" style={{ color: colors.textSecondary, letterSpacing: 1 }}>
+          Módulos
+        </Text>
 
-          <TouchableOpacity 
-            className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center"
-            onPress={() => router.push('/(painel)/presenca')}
-          >
-            <Text className="text-4xl mb-3">✅</Text>
-            <Text className="text-manga-orangeDark font-bold text-lg">Presença</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Controle de ensaios</Text>
-          </TouchableOpacity>
+        <ModuleCard
+          icon="👥"
+          title="Membros"
+          subtitle="Gestão da bateria"
+          onPress={() => router.push('/(painel)/membros')}
+        />
+        <ModuleCard
+          icon="✅"
+          title="Presença"
+          subtitle="Controle de ensaios"
+          onPress={() => router.push('/(painel)/presenca')}
+        />
+        <ModuleCard
+          icon="📅"
+          title="Calendário"
+          subtitle="Eventos do ano"
+          onPress={() => router.push('/(painel)/calendario')}
+        />
+        <ModuleCard
+          icon="🥁"
+          title="Patrimônio"
+          subtitle="Instrumentos e uniformes"
+          badge="Em breve"
+          onPress={() => setPatrimonioVisivel(true)}
+        />
 
-          <TouchableOpacity
-            className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center"
-            onPress={() => router.push('/(painel)/calendario')}
-          >
-            <Text className="text-4xl mb-3">📅</Text>
-            <Text className="text-manga-orangeDark font-bold text-lg">Calendário</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Eventos do ano</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity className="bg-manga-white w-[48%] p-5 rounded-xl shadow-sm border border-[#ddd] mb-4 items-center">
-            <Text className="text-4xl mb-3">🥁</Text>
-            <Text className="text-manga-orangeDark font-bold text-lg">Patrimônio</Text>
-            <Text className="text-xs text-manga-gray text-center mt-1">Instrumentos</Text>
-          </TouchableOpacity>
-
-        </View>
-
-        <View className="mt-4">
+        <View className="mt-5">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-lg font-bold text-[#333]">Mural de Avisos</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+              Mural de Avisos
+            </Text>
             <TouchableOpacity onPress={() => router.push('/(painel)/calendario')}>
-              <Text className="text-xs text-manga-orangeDark font-bold">Ver calendário ›</Text>
+              <Text className="text-xs font-bold" style={{ color: colors.accent }}>
+                Ver calendário ›
+              </Text>
             </TouchableOpacity>
           </View>
 
           {carregando ? (
-            <View className="bg-manga-white p-6 rounded-xl shadow-sm items-center">
-              <ActivityIndicator size="small" color="#E65100" />
-              <Text className="text-xs text-manga-gray mt-2">Carregando eventos...</Text>
-            </View>
-          ) : eventos.length === 0 ? (
-            <View className="bg-manga-white p-6 rounded-xl border-l-4 border-manga-orangeDark shadow-sm items-center">
-              <Text className="text-3xl mb-2">📭</Text>
-              <Text className="font-bold text-[#333] mb-1">Nenhum evento agendado</Text>
-              <Text className="text-sm text-manga-gray text-center">
-                Os próximos eventos do calendário aparecerão aqui.
+            <View
+              className="p-6 rounded-2xl items-center"
+              style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
+            >
+              <ActivityIndicator size="small" color={colors.accent} />
+              <Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+                Carregando eventos...
               </Text>
             </View>
+          ) : eventosMural.length === 0 ? (
+            <View
+              className="rounded-2xl"
+              style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
+            >
+              <EmptyState
+                icon="📭"
+                title="Nenhum evento agendado"
+                message="Os próximos eventos do calendário aparecerão aqui."
+              />
+            </View>
           ) : (
-            eventos.map((evento, index) => (
-              <View
+            eventosMural.map((evento, index) => (
+              <TouchableOpacity
                 key={`${evento.id || evento.titulo}-${index}`}
-                className="bg-manga-white p-4 rounded-xl border-l-4 border-manga-orangeDark shadow-sm mb-3"
+                onPress={() => router.push('/(painel)/calendario')}
+                activeOpacity={0.85}
+                className="p-4 rounded-2xl mb-3"
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderLeftWidth: 4,
+                  borderLeftColor: colors.accent,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: isDark ? 0.2 : 0.05,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
               >
                 <View className="flex-row items-start justify-between">
-                  <Text className="font-bold text-[#333] flex-1 mr-2">{evento.titulo}</Text>
+                  <Text className="font-bold flex-1 mr-2" style={{ color: colors.textPrimary }}>
+                    {evento.titulo}
+                  </Text>
                   {evento.horario_evento ? (
-                    <View className="bg-[#fff3eb] px-2 py-1 rounded-full">
-                      <Text className="text-manga-orangeDark text-xs font-bold">
+                    <View className="px-2 py-1 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+                      <Text className="text-xs font-bold" style={{ color: colors.accent }}>
                         {evento.horario_evento}
                       </Text>
                     </View>
                   ) : null}
                 </View>
-                <Text className="text-xs text-manga-orangeDark font-semibold mt-1">
+                <Text className="text-xs font-semibold mt-1" style={{ color: colors.accent }}>
                   📅 {formatarDataEvento(evento.data_evento)}
                 </Text>
                 {evento.descricao ? (
-                  <Text className="text-sm text-manga-gray mt-2">{evento.descricao}</Text>
+                  <Text className="text-sm mt-2" style={{ color: colors.textSecondary }}>
+                    {evento.descricao}
+                  </Text>
                 ) : null}
-              </View>
+              </TouchableOpacity>
             ))
           )}
-        </View>
 
+          {!carregando && eventos.length > MAX_EVENTOS_MURAL ? (
+            <TouchableOpacity className="items-center py-2" onPress={() => router.push('/(painel)/calendario')}>
+              <Text className="text-xs font-bold" style={{ color: colors.accent }}>
+                Ver todos os {eventos.length} eventos ›
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </ScrollView>
+
+      <ComingSoonModal
+        visible={patrimonioVisivel}
+        onClose={() => setPatrimonioVisivel(false)}
+        title="Patrimônio"
+        message="Módulo em desenvolvimento. Em breve você poderá gerenciar instrumentos e uniformes da bateria."
+        icon="🥁"
+      />
     </SafeAreaView>
   );
 }
