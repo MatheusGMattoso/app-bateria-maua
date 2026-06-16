@@ -15,7 +15,6 @@ import { fetchJson } from '../../../utils/apiClient';
 import { useTheme } from '../../../context/ThemeContext';
 import { useResponsive } from '../../../utils/responsive';
 import ScreenHeader from '../../../components/ScreenHeader';
-import ThemeToggle from '../../../components/ThemeToggle';
 import EmptyState from '../../../components/EmptyState';
 import PostComposer from '../../../components/PostComposer';
 import PinnedAvisosSection from '../../../components/PinnedAvisosSection';
@@ -155,7 +154,6 @@ export default function FeedScreen() {
       <ScreenHeader
         title="Mural"
         subtitle="Avisos da diretoria e publicações da bateria"
-        right={<ThemeToggle />}
       />
 
       {usuario?.id ? (

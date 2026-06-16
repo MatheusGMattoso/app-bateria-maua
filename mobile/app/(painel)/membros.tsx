@@ -17,7 +17,6 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
-import ThemeToggle from '../../components/ThemeToggle';
 import MemberAvatar from '../../components/MemberAvatar';
 import { useResponsive } from '../../utils/responsive';
 import { ROTULO_PERFIL } from '../../utils/memberUtils';
@@ -178,7 +177,6 @@ export default function MembrosScreen() {
               ? 'Toque no card para ver o perfil. Segure o avatar para alterar o perfil de acesso.'
               : 'Toque no card para ver o perfil do ritmista.'
           }
-          right={<ThemeToggle />}
         />
 
         <View

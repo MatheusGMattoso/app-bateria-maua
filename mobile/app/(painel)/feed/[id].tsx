@@ -8,7 +8,6 @@ import { fetchJson } from '../../../utils/apiClient';
 import { useTheme } from '../../../context/ThemeContext';
 import { useResponsive } from '../../../utils/responsive';
 import ScreenHeader from '../../../components/ScreenHeader';
-import ThemeToggle from '../../../components/ThemeToggle';
 import PostCard from '../../../components/PostCard';
 import CommentList from '../../../components/CommentList';
 import CommentComposer from '../../../components/CommentComposer';
@@ -109,7 +108,7 @@ export default function FeedDetalheScreen() {
   if (erro || !post) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background, padding: screenPadding }}>
-        <ScreenHeader title="Publicação" right={<ThemeToggle />} />
+        <ScreenHeader title="Publicação" />
         <EmptyState icon="⚠️" title="Não encontrada" message={erro || 'Esta publicação não existe.'} />
       </SafeAreaView>
     );
@@ -122,7 +121,7 @@ export default function FeedDetalheScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenHeader title="Publicação" subtitle="Comentários e reações" right={<ThemeToggle />} />
+        <ScreenHeader title="Publicação" subtitle="Comentários e reações" />
 
         <PostCard
           post={post}

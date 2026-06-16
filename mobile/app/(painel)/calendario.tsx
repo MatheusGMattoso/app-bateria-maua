@@ -18,7 +18,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { resyncEventReminders, type TipoEvento } from '../../services/notificationService';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
-import ThemeToggle from '../../components/ThemeToggle';
 import { useResponsive } from '../../utils/responsive';
 
 type Evento = {
@@ -277,7 +276,6 @@ export default function CalendarioScreen() {
           <ScreenHeader
             title="Calendário"
             subtitle="Datas do ano e eventos agendados pela administração."
-            right={<ThemeToggle />}
           />
 
           <View

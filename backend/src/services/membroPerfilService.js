@@ -114,7 +114,15 @@ async function atualizarDados(membroId, solicitanteId, { instrumento, bio, remov
 
   const { error } = await supabase.from('membros').update(payload).eq('id', membroId);
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42703' || /instrumento|avatar_url|bio/.test(error.message || '')) {
+      throw criarErro(
+        'Colunas de perfil ainda nao existem no banco. Execute a migration add_perfil_ritmista no Supabase.',
+        500
+      );
+    }
+    throw error;
+  }
   return obterPerfilPublico(membroId);
 }
 
@@ -133,7 +141,15 @@ async function atualizarAvatar(membroId, solicitanteId, { buffer, mimeType, base
     .update({ avatar_url: imagem_url })
     .eq('id', membroId);
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42703' || /avatar_url/.test(error.message || '')) {
+      throw criarErro(
+        'Coluna avatar_url ainda nao existe no banco. Execute a migration add_perfil_ritmista no Supabase.',
+        500
+      );
+    }
+    throw error;
+  }
   return obterPerfilPublico(membroId);
 }
 

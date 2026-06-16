@@ -10,7 +10,6 @@ import { BASE_URL } from '../../config/api';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
-import ThemeToggle from '../../components/ThemeToggle';
 import GamificationCelebration, { GamificacaoFeedback } from '../../components/GamificationCelebration';
 import { useResponsive } from '../../utils/responsive';
 
@@ -179,7 +178,6 @@ export default function PresencaScreen() {
         <ScreenHeader
           title="Presença"
           subtitle="Acompanhe seu rendimento nos ensaios."
-          right={<ThemeToggle />}
         />
 
         {!carregandoResumo && resumo.frequencia < 70 && (
