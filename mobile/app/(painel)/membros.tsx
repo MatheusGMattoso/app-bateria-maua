@@ -93,7 +93,7 @@ export default function MembrosScreen() {
       await fetchJson(`${BASE_URL}/membros/${membro.id}/perfil`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ perfil_acesso: novoPerfil, solicitante_id: usuario.id }),
+        body: JSON.stringify({ perfil_acesso: novoPerfil }),
       });
 
       setMembros((lista) =>

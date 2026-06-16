@@ -55,7 +55,7 @@ export default function DashboardScreen() {
   const [feedResumo, setFeedResumo] = useState<{ total: number } | null>(null);
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('usuario');
+    await AsyncStorage.multiRemove(['token', 'usuario']);
     router.replace('/(auth)/login');
   };
 

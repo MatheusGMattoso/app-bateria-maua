@@ -35,6 +35,7 @@ export default function LoginScreen() {
         body: JSON.stringify({ email, senha }),
       });
 
+      await AsyncStorage.setItem('token', dados.token);
       await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
       if (dados.usuario?.id) {
         import('../../services/notificationService')
