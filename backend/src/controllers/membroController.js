@@ -25,10 +25,34 @@ exports.registrarMembro = async (req, res) => {
 
 exports.listarMembros = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const camposCompletos = 'id, nome, email, perfil_acesso, instrumento, avatar_url';
+    const camposBasicos = 'id, nome, email, perfil_acesso';
+
+    let { data, error } = await supabase
       .from('membros')
-      .select('id, nome, email, perfil_acesso')
+      .select(camposCompletos)
       .order('nome', { ascending: true });
+
+    if (error) {
+      const colunaInexistente =
+        error.code === '42703' ||
+        /instrumento|avatar_url/.test(error.message || '');
+
+      if (colunaInexistente) {
+        ({ data, error } = await supabase
+          .from('membros')
+          .select(camposBasicos)
+          .order('nome', { ascending: true }));
+
+        if (!error && data) {
+          data = data.map((item) => ({
+            ...item,
+            instrumento: null,
+            avatar_url: null,
+          }));
+        }
+      }
+    }
 
     if (error) throw error;
 

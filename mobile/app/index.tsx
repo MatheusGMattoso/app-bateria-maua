@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
-import ThemeToggle from '../components/ThemeToggle';
 import { useResponsive } from '../utils/responsive';
 
 export default function WelcomeScreen() {
@@ -13,10 +12,6 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
-      <View className="flex-row justify-end" style={{ paddingHorizontal: screenPadding, paddingTop: 8 }}>
-        <ThemeToggle />
-      </View>
-
       <View className="flex-1 justify-between pb-16" style={{ paddingHorizontal: screenPadding, paddingTop: 24 }}>
         <View className="flex-1 justify-center items-center">
           <View

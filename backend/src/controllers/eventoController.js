@@ -1,8 +1,10 @@
 const supabase = require('../config/supabase');
 const fs = require('fs');
 const path = require('path');
+const notificacaoService = require('../services/notificacaoService');
 
 const PERFIS_AUTORIZADOS = ['Administrador', 'Gestor de Módulo'];
+const TIPOS_EVENTO_VALIDOS = ['ensaio', 'evento', 'show'];
 const EVENTOS_FALLBACK_PATH = path.join(__dirname, '..', '..', 'data', 'eventos.json');
 
 function ensureFallbackFile() {
@@ -113,7 +115,7 @@ exports.listarEventos = async (req, res) => {
 
 exports.criarEvento = async (req, res) => {
   try {
-    const { titulo, descricao, data_evento, horario_evento, criado_por, perfil_acesso } = req.body;
+    const { titulo, descricao, data_evento, horario_evento, criado_por, perfil_acesso, tipo } = req.body;
 
     if (!titulo || !data_evento) {
       return res.status(400).json({ erro: 'Titulo e data_evento sao obrigatorios.' });
@@ -135,11 +137,14 @@ exports.criarEvento = async (req, res) => {
       return res.status(403).json({ erro: 'Apenas administradores podem agendar eventos.' });
     }
 
+    const tipoFinal = TIPOS_EVENTO_VALIDOS.includes(tipo) ? tipo : 'ensaio';
+
     const payload = {
       titulo,
       descricao: descricao || null,
       data_evento,
       horario_evento,
+      tipo: tipoFinal,
       criado_por: criado_por || null,
     };
 
@@ -164,12 +169,24 @@ exports.criarEvento = async (req, res) => {
         });
         salvarEventosFallback(eventosOrdenados);
 
+        try {
+          await notificacaoService.notificarNovoEvento(novoEvento);
+        } catch (erroNotif) {
+          console.error('Erro ao notificar novo evento (fallback):', erroNotif.message);
+        }
+
         return res.status(201).json({
           mensagem: 'Evento agendado com sucesso!',
           evento: novoEvento,
         });
       }
       throw error;
+    }
+
+    try {
+      await notificacaoService.notificarNovoEvento(data);
+    } catch (erroNotif) {
+      console.error('Erro ao notificar novo evento:', erroNotif.message);
     }
 
     return res.status(201).json({

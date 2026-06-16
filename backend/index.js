@@ -10,6 +10,7 @@ const presencaRoutes = require('./src/routes/presencaRoutes');
 const gamificacaoRoutes = require('./src/routes/gamificacaoRoutes');
 const feedRoutes = require('./src/routes/feedRoutes');
 const patrimonioRoutes = require('./src/routes/patrimonioRoutes');
+const notificacaoRoutes = require('./src/routes/notificacaoRoutes');
 
 const app = express();
 app.use(cors());
@@ -42,6 +43,9 @@ app.use('/api/feed', feedRoutes);
 // Rota do Patrimônio
 app.use('/api/patrimonio', patrimonioRoutes);
 
+// Rota de Notificacoes / Lembretes
+app.use('/api/notificacoes', notificacaoRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
@@ -57,4 +61,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+  console.log('Rotas de perfil: GET /api/membros/:id/perfil-completo');
 });
