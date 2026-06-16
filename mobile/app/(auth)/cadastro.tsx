@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { BASE_URL } from '../../config/api';
 import { useRouter } from 'expo-router';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import LoadingButton from '../../components/LoadingButton';
 import { useResponsive } from '../../utils/responsive';
+import { tituloMarca } from '../../theme/typography';
 
 export default function RegisterScreen() {
   const [nome, setNome] = useState('');
@@ -72,14 +73,16 @@ export default function RegisterScreen() {
       >
         <View style={{ paddingHorizontal: screenPadding, paddingVertical: 20 }}>
           <View className="items-center mb-6">
-            <View
-              className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
-              style={{ backgroundColor: colors.accentSoft }}
+            <Image
+              source={require('../../assets/images/logo-bateria-maua.png')}
+              style={{ width: 104, height: 104, marginBottom: 10 }}
+              resizeMode="contain"
+            />
+            <Text
+              className="text-4xl text-center"
+              style={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: -0.5 }}
             >
-              <Text style={{ fontSize: 32 }}>🥭</Text>
-            </View>
-            <Text className="text-3xl font-bold text-center" style={{ color: colors.textPrimary }}>
-              Criar Conta
+              {tituloMarca('Criar conta')}
             </Text>
             <Text className="text-base text-center mt-1" style={{ color: colors.textSecondary }}>
               Junte-se à Bateria Mauá
