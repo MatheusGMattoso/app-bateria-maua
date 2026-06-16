@@ -8,7 +8,6 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ModuleCard from '../../components/ModuleCard';
 import EmptyState from '../../components/EmptyState';
-import ComingSoonModal from '../../components/ComingSoonModal';
 import SettingsButton from '../../components/SettingsButton';
 import { abreviarPerfil, useResponsive } from '../../utils/responsive';
 import { useNotifications } from '../../context/NotificationContext';
@@ -51,7 +50,6 @@ export default function DashboardScreen() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<any>(null);
-  const [patrimonioVisivel, setPatrimonioVisivel] = useState(false);
   const [gamResumo, setGamResumo] = useState<{ nivel: number; nome: string; pontos: number } | null>(null);
   const [feedResumo, setFeedResumo] = useState<{ total: number } | null>(null);
 
@@ -243,8 +241,7 @@ export default function DashboardScreen() {
           icon="🥁"
           title="Patrimônio"
           subtitle="Instrumentos e uniformes"
-          badge="Em breve"
-          onPress={() => setPatrimonioVisivel(true)}
+          onPress={() => router.push('/(painel)/patrimonio')}
         />
 
         <View className="mt-5">
@@ -337,14 +334,6 @@ export default function DashboardScreen() {
           ) : null}
         </View>
       </ScrollView>
-
-      <ComingSoonModal
-        visible={patrimonioVisivel}
-        onClose={() => setPatrimonioVisivel(false)}
-        title="Patrimônio"
-        message="Módulo em desenvolvimento. Em breve você poderá gerenciar instrumentos e uniformes da bateria."
-        icon="🥁"
-      />
     </SafeAreaView>
   );
 }

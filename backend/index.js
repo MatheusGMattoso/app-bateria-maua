@@ -9,6 +9,7 @@ const eventoRoutes = require('./src/routes/eventoRoutes');
 const presencaRoutes = require('./src/routes/presencaRoutes');
 const gamificacaoRoutes = require('./src/routes/gamificacaoRoutes');
 const feedRoutes = require('./src/routes/feedRoutes');
+const patrimonioRoutes = require('./src/routes/patrimonioRoutes');
 const notificacaoRoutes = require('./src/routes/notificacaoRoutes');
 
 const app = express();
@@ -17,6 +18,9 @@ app.use(express.json({ limit: '10mb' }));
 
 // Imagens do mural (fallback local quando Supabase Storage nao estiver configurado)
 app.use('/uploads/feed', express.static(path.join(__dirname, 'uploads', 'feed')));
+
+// Imagens do patrimonio (fallback local quando Supabase Storage nao estiver configurado)
+app.use('/uploads/patrimonio', express.static(path.join(__dirname, 'uploads', 'patrimonio')));
 
 //Rota de Membros
 app.use('/api/membros', membroRoutes);
@@ -35,6 +39,9 @@ app.use('/api/gamificacao', gamificacaoRoutes);
 
 // Rota do Feed / Mural Social
 app.use('/api/feed', feedRoutes);
+
+// Rota do Patrimônio
+app.use('/api/patrimonio', patrimonioRoutes);
 
 // Rota de Notificacoes / Lembretes
 app.use('/api/notificacoes', notificacaoRoutes);
