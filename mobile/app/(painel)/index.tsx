@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, type Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/api';
 import { fetchJson } from '../../utils/apiClient';
@@ -9,8 +9,9 @@ import { useTheme } from '../../context/ThemeContext';
 import ModuleCard from '../../components/ModuleCard';
 import EmptyState from '../../components/EmptyState';
 import ComingSoonModal from '../../components/ComingSoonModal';
-import ThemeToggle from '../../components/ThemeToggle';
+import SettingsButton from '../../components/SettingsButton';
 import { abreviarPerfil, useResponsive } from '../../utils/responsive';
+import { useNotifications } from '../../context/NotificationContext';
 
 type Evento = {
   id?: string;
@@ -45,6 +46,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { screenPadding, isSmall } = useResponsive();
+  const { resyncReminders } = useNotifications();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<any>(null);
@@ -116,27 +118,40 @@ export default function DashboardScreen() {
       })();
       buscarEventos();
       carregarFeedResumo();
-    }, [buscarEventos, carregarGamificacao, carregarFeedResumo])
+      resyncReminders(false);
+    }, [buscarEventos, carregarGamificacao, carregarFeedResumo, resyncReminders])
   );
 
   const perfil = usuario?.perfil_acesso || 'Membro';
   const eventosMural = eventos.slice(0, MAX_EVENTOS_MURAL);
+
+  const abrirMeuPerfil = () => {
+    if (usuario?.id) {
+      router.push(`/(painel)/perfil/${usuario.id}` as Href);
+    }
+  };
+
+  const subtituloMeuPerfil = usuario?.instrumento
+    ? `${usuario.instrumento} · presenças e conquistas`
+    : 'Seu perfil, presenças e conquistas';
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: screenPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <View className="mb-7 mt-1">
           <View className="flex-row items-start justify-between">
-            <Text
-              className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold flex-1 pr-3`}
-              style={{ color: colors.textPrimary }}
-              numberOfLines={2}
-            >
-              Olá, {primeiroNome(usuario?.nome)}! 🥭
-            </Text>
+            <TouchableOpacity className="flex-1 pr-3" onPress={abrirMeuPerfil} activeOpacity={0.7} disabled={!usuario?.id}>
+              <Text
+                className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold`}
+                style={{ color: colors.textPrimary }}
+                numberOfLines={2}
+              >
+                Olá, {primeiroNome(usuario?.nome)}! 🥭
+              </Text>
+            </TouchableOpacity>
 
             <View className="flex-row items-center shrink-0" style={{ gap: 8 }}>
-              <ThemeToggle />
+              <SettingsButton />
               <TouchableOpacity
                 onPress={handleLogout}
                 className="px-3 py-2 rounded-full justify-center items-center"
@@ -166,6 +181,12 @@ export default function DashboardScreen() {
           Módulos
         </Text>
 
+        <ModuleCard
+          icon="👤"
+          title="Meu Perfil"
+          subtitle={subtituloMeuPerfil}
+          onPress={abrirMeuPerfil}
+        />
         <ModuleCard
           icon="👥"
           title="Membros"

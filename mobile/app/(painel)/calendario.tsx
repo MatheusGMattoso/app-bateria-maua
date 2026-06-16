@@ -15,9 +15,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/api';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
+import { resyncEventReminders, type TipoEvento } from '../../services/notificationService';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
-import ThemeToggle from '../../components/ThemeToggle';
 import { useResponsive } from '../../utils/responsive';
 
 type Evento = {
@@ -27,6 +27,19 @@ type Evento = {
   data_evento: string;
   horario_evento?: string | null;
   criado_por?: string | null;
+  tipo?: TipoEvento | null;
+};
+
+const TIPOS_EVENTO: { valor: TipoEvento; label: string }[] = [
+  { valor: 'ensaio', label: 'Ensaio' },
+  { valor: 'evento', label: 'Evento' },
+  { valor: 'show', label: 'Show' },
+];
+
+const TIPO_BADGE: Record<TipoEvento, string> = {
+  ensaio: 'Ensaio',
+  evento: 'Evento',
+  show: 'Show',
 };
 
 const NOMES_MESES = [
@@ -70,6 +83,7 @@ export default function CalendarioScreen() {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [horarioEvento, setHorarioEvento] = useState(formatTimeKey(hoje));
+  const [tipoEvento, setTipoEvento] = useState<TipoEvento>('ensaio');
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -156,14 +170,20 @@ export default function CalendarioScreen() {
           descricao,
           data_evento: dataSelecionada,
           horario_evento: horarioEvento,
+          tipo: tipoEvento,
           criado_por: usuario?.id || null,
           perfil_acesso: usuario?.perfil_acesso,
         }),
       });
 
+      if (usuario?.id) {
+        await resyncEventReminders(usuario.id);
+      }
+
       Alert.alert('Sucesso', 'Evento agendado com sucesso.');
       setTitulo('');
       setDescricao('');
+      setTipoEvento('ensaio');
       setHorarioEvento(formatTimeKey(new Date()));
       setFormularioAberto(false);
       formAnimacao.setValue(0);
@@ -256,7 +276,6 @@ export default function CalendarioScreen() {
           <ScreenHeader
             title="Calendário"
             subtitle="Datas do ano e eventos agendados pela administração."
-            right={<ThemeToggle />}
           />
 
           <View
@@ -391,9 +410,16 @@ export default function CalendarioScreen() {
                         style={{ height: '100%', minHeight: 40, backgroundColor: colors.accent }}
                       />
                       <View className="flex-1 p-3 rounded-xl" style={{ backgroundColor: colors.backgroundAlt }}>
-                        <Text className="font-bold text-sm" style={{ color: colors.textPrimary }}>
-                          {evento.titulo}
-                        </Text>
+                        <View className="flex-row items-center justify-between">
+                          <Text className="font-bold text-sm flex-1 mr-2" style={{ color: colors.textPrimary }}>
+                            {evento.titulo}
+                          </Text>
+                          <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+                            <Text className="text-[10px] font-bold" style={{ color: colors.accent }}>
+                              {TIPO_BADGE[evento.tipo || 'ensaio']}
+                            </Text>
+                          </View>
+                        </View>
                         {evento.horario_evento && (
                           <Text className="text-xs font-semibold mt-1" style={{ color: colors.accent }}>
                             🕐 {evento.horario_evento}
@@ -439,6 +465,34 @@ export default function CalendarioScreen() {
                           onChangeText={setTitulo}
                           onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
                         />
+
+                        <Text className="text-xs font-semibold mb-1 ml-1" style={{ color: colors.textSecondary }}>
+                          TIPO
+                        </Text>
+                        <View className="flex-row mb-3" style={{ gap: 8 }}>
+                          {TIPOS_EVENTO.map((opcao) => {
+                            const selecionado = tipoEvento === opcao.valor;
+                            return (
+                              <TouchableOpacity
+                                key={opcao.valor}
+                                className="flex-1 py-2 rounded-xl items-center"
+                                style={{
+                                  backgroundColor: selecionado ? colors.accent : colors.backgroundAlt,
+                                  borderWidth: 1,
+                                  borderColor: selecionado ? colors.accent : colors.border,
+                                }}
+                                onPress={() => setTipoEvento(opcao.valor)}
+                              >
+                                <Text
+                                  className="text-xs font-bold"
+                                  style={{ color: selecionado ? colors.onAccent : colors.textSecondary }}
+                                >
+                                  {opcao.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
 
                         <Text className="text-xs font-semibold mb-1 ml-1" style={{ color: colors.textSecondary }}>
                           HORÁRIO

@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import LoadingButton from '../../components/LoadingButton';
-import ThemeToggle from '../../components/ThemeToggle';
 import { useResponsive } from '../../utils/responsive';
 
 export default function RegisterScreen() {
@@ -71,10 +70,6 @@ export default function RegisterScreen() {
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row justify-end" style={{ paddingHorizontal: screenPadding, paddingTop: 8 }}>
-          <ThemeToggle />
-        </View>
-
         <View style={{ paddingHorizontal: screenPadding, paddingVertical: 20 }}>
           <View className="items-center mb-6">
             <View

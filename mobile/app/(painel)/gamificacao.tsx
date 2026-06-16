@@ -7,7 +7,6 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import { useResponsive } from '../../utils/responsive';
 import ScreenHeader from '../../components/ScreenHeader';
-import ThemeToggle from '../../components/ThemeToggle';
 import EmptyState from '../../components/EmptyState';
 import LevelProgressCard from '../../components/LevelProgressCard';
 import AchievementBadge from '../../components/AchievementBadge';
@@ -115,7 +114,6 @@ export default function GamificacaoScreen() {
         <ScreenHeader
           title="Minha Manga"
           subtitle="Seu progresso no Clube da Manga."
-          right={<ThemeToggle />}
         />
 
         {carregando ? (

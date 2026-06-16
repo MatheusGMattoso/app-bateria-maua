@@ -11,39 +11,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter, type Href } from 'expo-router';
 import { BASE_URL } from '../../config/api';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
-import ThemeToggle from '../../components/ThemeToggle';
+import MemberAvatar from '../../components/MemberAvatar';
 import { useResponsive } from '../../utils/responsive';
+import { ROTULO_PERFIL } from '../../utils/memberUtils';
 
 type Membro = {
   id: string;
   nome: string;
   email: string;
   perfil_acesso: string;
+  instrumento?: string | null;
+  avatar_url?: string | null;
 };
 
 const PERFIS_DISPONIVEIS = ['Administrador', 'Gestor de Módulo', 'Membro'] as const;
 
-const ROTULO_PERFIL: Record<string, string> = {
-  Administrador: 'Administrador',
-  'Gestor de Módulo': 'Gestor',
-  Membro: 'Membro',
-};
-
-function obterIniciais(nome: string) {
-  return nome
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0].toUpperCase())
-    .join('');
-}
-
 export default function MembrosScreen() {
+  const router = useRouter();
   const { colors, isDark } = useTheme();
   const { screenPadding, isSmall } = useResponsive();
   const [membros, setMembros] = useState<Membro[]>([]);
@@ -127,13 +117,17 @@ export default function MembrosScreen() {
   const abrirAlteracaoPerfil = (membro: Membro) => {
     if (!ehAdministrador) return;
 
-    Alert.alert('Alterar perfil', `Selecione o novo perfil para ${membro.nome}:`, [
+    Alert.alert('Alterar perfil de acesso', `Selecione o novo perfil para ${membro.nome}:`, [
       ...PERFIS_DISPONIVEIS.map((perfil) => ({
         text: ROTULO_PERFIL[perfil],
         onPress: () => atualizarPerfil(membro, perfil),
       })),
       { text: 'Cancelar', style: 'cancel' as const },
     ]);
+  };
+
+  const abrirPerfil = (membroId: string) => {
+    router.push(`/(painel)/perfil/${membroId}` as Href);
   };
 
   const membrosFiltrados = membros.filter((m) => {
@@ -178,8 +172,11 @@ export default function MembrosScreen() {
         <ScreenHeader
           title="Membros"
           subtitle="Gestão dos integrantes da bateria."
-          hint={ehAdministrador ? 'Toque no avatar de um membro para alterar o perfil.' : undefined}
-          right={<ThemeToggle />}
+          hint={
+            ehAdministrador
+              ? 'Toque no card para ver o perfil. Segure o avatar para alterar o perfil de acesso.'
+              : 'Toque no card para ver o perfil do ritmista.'
+          }
         />
 
         <View
@@ -283,7 +280,7 @@ export default function MembrosScreen() {
               const ehUsuarioLogado = usuario?.id === membro.id;
 
               return (
-                <View
+                <TouchableOpacity
                   key={membro.id}
                   className="rounded-2xl mb-3 p-4"
                   style={{
@@ -292,32 +289,38 @@ export default function MembrosScreen() {
                     borderColor: ehUsuarioLogado ? colors.accent : colors.border,
                     ...sombraCard,
                   }}
+                  onPress={() => abrirPerfil(membro.id)}
+                  activeOpacity={0.85}
                 >
                   <View className="flex-row items-center">
                     {ehAdministrador ? (
                       <TouchableOpacity
-                        className="w-12 h-12 rounded-full items-center justify-center mr-3"
-                        style={{ backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.accentLight }}
-                        onPress={() => abrirAlteracaoPerfil(membro)}
+                        className="mr-3"
+                        onPress={() => abrirPerfil(membro.id)}
+                        onLongPress={() => abrirAlteracaoPerfil(membro)}
+                        delayLongPress={400}
                         activeOpacity={0.7}
                         disabled={atualizandoId === membro.id}
                       >
                         {atualizandoId === membro.id ? (
-                          <ActivityIndicator size="small" color={colors.onAccent} />
+                          <View
+                            className="w-12 h-12 rounded-full items-center justify-center"
+                            style={{ backgroundColor: colors.accent }}
+                          >
+                            <ActivityIndicator size="small" color={colors.onAccent} />
+                          </View>
                         ) : (
-                          <Text className="font-bold text-base" style={{ color: colors.onAccent }}>
-                            {obterIniciais(membro.nome)}
-                          </Text>
+                          <MemberAvatar
+                            nome={membro.nome}
+                            avatarUrl={membro.avatar_url}
+                            tamanho="sm"
+                            destacado
+                          />
                         )}
                       </TouchableOpacity>
                     ) : (
-                      <View
-                        className="w-12 h-12 rounded-full items-center justify-center mr-3"
-                        style={{ backgroundColor: colors.accent }}
-                      >
-                        <Text className="font-bold text-base" style={{ color: colors.onAccent }}>
-                          {obterIniciais(membro.nome)}
-                        </Text>
+                      <View className="mr-3">
+                        <MemberAvatar nome={membro.nome} avatarUrl={membro.avatar_url} tamanho="sm" />
                       </View>
                     )}
                     <View className="flex-1 min-w-0">
@@ -336,6 +339,11 @@ export default function MembrosScreen() {
                       <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
                         {membro.email}
                       </Text>
+                      {membro.instrumento ? (
+                        <Text className="text-[10px] mt-0.5 font-semibold" style={{ color: colors.accent }} numberOfLines={1}>
+                          🥁 {membro.instrumento}
+                        </Text>
+                      ) : null}
                     </View>
                     <View className="px-2 py-1.5 rounded-full shrink-0 ml-1" style={{ backgroundColor: perfil.bg }}>
                       <Text className="text-[10px] font-bold" style={{ color: perfil.text }}>
@@ -343,7 +351,7 @@ export default function MembrosScreen() {
                       </Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>

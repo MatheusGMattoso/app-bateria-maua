@@ -10,7 +10,6 @@ import { BASE_URL } from '../../config/api';
 import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import ScreenHeader from '../../components/ScreenHeader';
-import ThemeToggle from '../../components/ThemeToggle';
 import GamificationCelebration, { GamificacaoFeedback } from '../../components/GamificationCelebration';
 import { useResponsive } from '../../utils/responsive';
 
@@ -179,8 +178,21 @@ export default function PresencaScreen() {
         <ScreenHeader
           title="Presença"
           subtitle="Acompanhe seu rendimento nos ensaios."
-          right={<ThemeToggle />}
         />
+
+        {!carregandoResumo && resumo.frequencia < 70 && (
+          <View
+            className="rounded-2xl p-4 mb-5"
+            style={{ backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent }}
+          >
+            <Text className="font-bold text-sm" style={{ color: colors.accent }}>
+              Frequência PAE abaixo do mínimo
+            </Text>
+            <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+              Sua frequência está em {resumo.frequencia}%. O mínimo exigido para aprovação é 70%.
+            </Text>
+          </View>
+        )}
 
         {carregandoResumo ? (
           <View
