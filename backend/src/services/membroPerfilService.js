@@ -14,6 +14,8 @@ const INSTRUMENTOS_VALIDOS = [
   'Outro',
 ];
 
+const CAMPOS_PERFIL = 'id, nome, perfil_acesso, instrumento, bio, avatar_url';
+const CAMPOS_BASICOS = 'id, nome, perfil_acesso';
 const BIO_MAX_LENGTH = 200;
 
 function criarErro(mensagem, status = 400) {
@@ -45,12 +47,9 @@ async function verificarPermissaoEdicao(membroId, solicitanteId) {
 }
 
 async function selectMembroPorId(membroId) {
-  const camposCompletos = 'id, nome, perfil_acesso, instrumento, bio, avatar_url, created_at';
-  const camposBasicos = 'id, nome, perfil_acesso';
-
   let { data, error } = await supabase
     .from('membros')
-    .select(camposCompletos)
+    .select(CAMPOS_PERFIL)
     .eq('id', membroId)
     .single();
 
@@ -58,12 +57,12 @@ async function selectMembroPorId(membroId) {
 
   const colunaInexistente =
     error.code === '42703' ||
-    /instrumento|avatar_url|bio/.test(error.message || '');
+    /instrumento|avatar_url|bio|created_at/.test(error.message || '');
 
   if (colunaInexistente) {
     ({ data, error } = await supabase
       .from('membros')
-      .select(camposBasicos)
+      .select(CAMPOS_BASICOS)
       .eq('id', membroId)
       .single());
 
@@ -113,15 +112,10 @@ async function atualizarDados(membroId, solicitanteId, { instrumento, bio, remov
     throw criarErro('Nenhum campo para atualizar.');
   }
 
-  const { data, error } = await supabase
-    .from('membros')
-    .update(payload)
-    .eq('id', membroId)
-    .select('id, nome, perfil_acesso, instrumento, bio, avatar_url, created_at')
-    .single();
+  const { error } = await supabase.from('membros').update(payload).eq('id', membroId);
 
   if (error) throw error;
-  return data;
+  return obterPerfilPublico(membroId);
 }
 
 async function atualizarAvatar(membroId, solicitanteId, { buffer, mimeType, baseUrl }) {
@@ -134,15 +128,13 @@ async function atualizarAvatar(membroId, solicitanteId, { buffer, mimeType, base
     baseUrl,
   });
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('membros')
     .update({ avatar_url: imagem_url })
-    .eq('id', membroId)
-    .select('id, nome, perfil_acesso, instrumento, bio, avatar_url, created_at')
-    .single();
+    .eq('id', membroId);
 
   if (error) throw error;
-  return data;
+  return obterPerfilPublico(membroId);
 }
 
 function extrairTimestampEnsaio(codigoQr) {
