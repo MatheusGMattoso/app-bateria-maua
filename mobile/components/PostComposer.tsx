@@ -203,11 +203,11 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
         </View>
       ) : null}
 
-      <View className="flex-row items-center justify-between">
+      <View className="flex-row items-center" style={{ gap: 12 }}>
         <TouchableOpacity
           onPress={selecionarImagem}
           disabled={salvando}
-          className="px-3 py-2 rounded-xl"
+          className="flex-1 px-3 py-2 rounded-xl"
           style={{
             backgroundColor: colors.backgroundAlt,
             borderWidth: 1,
@@ -220,7 +220,12 @@ export default function PostComposer({ autorId, perfilAcesso, onPublicado }: Pro
           </Text>
         </TouchableOpacity>
 
-        <LoadingButton label="Publicar" onPress={publicar} loading={salvando} className="px-6" />
+        <LoadingButton
+          label="Publicar"
+          onPress={publicar}
+          loading={salvando}
+          compact
+        />
       </View>
     </View>
   );

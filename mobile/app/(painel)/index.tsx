@@ -232,7 +232,9 @@ export default function DashboardScreen() {
             feedResumo
               ? feedResumo.total === 0
                 ? 'Nenhuma publicação ainda'
-                : `${feedResumo.total} publicação${feedResumo.total !== 1 ? 'ões' : ''} recentes`
+                : feedResumo.total === 1
+                  ? '1 publicação recente'
+                  : `${feedResumo.total} publicações recentes`
               : 'Avisos e publicações da bateria'
           }
           onPress={() => router.push('/(painel)/feed')}

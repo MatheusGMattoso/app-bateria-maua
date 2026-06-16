@@ -175,7 +175,7 @@ export default function FeedScreen() {
       />
 
       {posts.length > 0 ? (
-        <Text className="text-xs font-bold uppercase mb-3 ml-1" style={{ color: colors.textSecondary, letterSpacing: 1 }}>
+        <Text className="text-xs font-bold uppercase mb-3" style={{ color: colors.textSecondary, letterSpacing: 1 }}>
           Publicações
         </Text>
       ) : null}
