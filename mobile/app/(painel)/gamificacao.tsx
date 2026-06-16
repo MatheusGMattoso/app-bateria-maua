@@ -9,6 +9,7 @@ import { useResponsive } from '../../utils/responsive';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
 import LevelProgressCard from '../../components/LevelProgressCard';
+import LevelsList from '../../components/LevelsList';
 import AchievementBadge from '../../components/AchievementBadge';
 import RankingList from '../../components/RankingList';
 
@@ -128,6 +129,8 @@ export default function GamificacaoScreen() {
         ) : perfil ? (
           <>
             <LevelProgressCard nivel={perfil.nivel} pontos={perfil.pontos} posicaoRanking={posicaoUsuario} />
+
+            <LevelsList pontos={perfil.pontos} nivelAtual={perfil.nivel.numero} />
 
             <View className="flex-row mb-6" style={{ gap: 10 }}>
               {[

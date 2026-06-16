@@ -12,6 +12,7 @@ type Props = {
   variant?: Variant;
   icon?: string;
   className?: string;
+  compact?: boolean;
 };
 
 export default function LoadingButton({
@@ -22,6 +23,7 @@ export default function LoadingButton({
   variant = 'primary',
   icon,
   className = '',
+  compact = false,
 }: Props) {
   const { colors } = useTheme();
   const inativo = loading || disabled;
@@ -30,14 +32,19 @@ export default function LoadingButton({
   const ehContorno = variant === 'outline';
 
   const corTexto = ehContorno ? colors.accent : colors.onAccent;
+  const altura = compact ? 42 : 52;
+  const paddingHorizontal = compact ? 20 : 24;
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={inativo}
       activeOpacity={0.85}
-      className={`h-[52px] rounded-2xl items-center justify-center flex-row ${className}`}
+      className={`rounded-2xl items-center justify-center flex-row shrink-0 ${className}`}
       style={{
+        height: altura,
+        minWidth: compact ? 108 : undefined,
+        paddingHorizontal,
         backgroundColor: ehContorno ? 'transparent' : fundo,
         borderWidth: ehContorno ? 2 : 0,
         borderColor: ehContorno ? colors.accent : undefined,

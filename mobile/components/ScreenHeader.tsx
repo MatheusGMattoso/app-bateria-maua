@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { useResponsive } from '../utils/responsive';
+import { tituloMarca } from '../theme/typography';
 
 type Props = {
   title: string;
@@ -49,11 +50,11 @@ export default function ScreenHeader({
             </TouchableOpacity>
           )}
           <Text
-            className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold flex-1`}
-            style={{ color: colors.textPrimary }}
+            className={`${isSmall ? 'text-2xl' : 'text-3xl'} flex-1`}
+            style={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: -0.5 }}
             numberOfLines={2}
           >
-            {title}
+            {tituloMarca(title)}
           </Text>
         </View>
 

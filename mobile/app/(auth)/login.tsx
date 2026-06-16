@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BASE_URL } from '../../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +7,7 @@ import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
 import LoadingButton from '../../components/LoadingButton';
 import { useResponsive } from '../../utils/responsive';
+import { tituloMarca } from '../../theme/typography';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -68,17 +69,25 @@ export default function LoginScreen() {
       >
         <View style={{ paddingHorizontal: screenPadding, paddingVertical: 20 }}>
           <View className="items-center mb-6">
-            <View
-              className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
-              style={{ backgroundColor: colors.accentSoft }}
+            <Image
+              source={require('../../assets/images/logo-bateria-maua.png')}
+              style={{ width: 132, height: 132, marginBottom: 12 }}
+              resizeMode="contain"
+            />
+            <Text
+              className="text-4xl text-center"
+              style={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: -0.5 }}
             >
-              <Text style={{ fontSize: 32 }}>🥭</Text>
-            </View>
-            <Text className="text-3xl font-bold text-center" style={{ color: colors.textPrimary }}>
-              Bem-vindo(a)!
+              {tituloMarca('Bateria Mauá')}
             </Text>
-            <Text className="text-base text-center mt-1" style={{ color: colors.textSecondary }}>
-              Acesse o painel da Bateria Mauá
+            <Text
+              className="text-xs text-center mt-1 uppercase"
+              style={{ color: colors.accent, fontWeight: '700', letterSpacing: 2 }}
+            >
+              Clube da Manga
+            </Text>
+            <Text className="text-base text-center mt-3" style={{ color: colors.textSecondary }}>
+              Acesse o painel da bateria
             </Text>
           </View>
 

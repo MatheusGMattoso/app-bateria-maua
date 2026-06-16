@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect, type Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,7 @@ import EmptyState from '../../components/EmptyState';
 import SettingsButton from '../../components/SettingsButton';
 import { abreviarPerfil, useResponsive } from '../../utils/responsive';
 import { useNotifications } from '../../context/NotificationContext';
+import { tituloMarca } from '../../theme/typography';
 
 type Evento = {
   id?: string;
@@ -138,13 +139,23 @@ export default function DashboardScreen() {
       <ScrollView contentContainerStyle={{ padding: screenPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <View className="mb-7 mt-1">
           <View className="flex-row items-start justify-between">
-            <TouchableOpacity className="flex-1 pr-3" onPress={abrirMeuPerfil} activeOpacity={0.7} disabled={!usuario?.id}>
+            <TouchableOpacity
+              className="flex-1 pr-3 flex-row items-center"
+              onPress={abrirMeuPerfil}
+              activeOpacity={0.7}
+              disabled={!usuario?.id}
+            >
+              <Image
+                source={require('../../assets/images/logo-bateria-maua.png')}
+                style={{ width: 46, height: 46, marginRight: 10 }}
+                resizeMode="contain"
+              />
               <Text
-                className={`${isSmall ? 'text-xl' : 'text-2xl'} font-bold`}
-                style={{ color: colors.textPrimary }}
+                className={`${isSmall ? 'text-2xl' : 'text-3xl'} flex-1`}
+                style={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: -0.5 }}
                 numberOfLines={2}
               >
-                Olá, {primeiroNome(usuario?.nome)}! 🥭
+                {tituloMarca(`Olá, ${primeiroNome(usuario?.nome)}!`)}
               </Text>
             </TouchableOpacity>
 
@@ -164,8 +175,11 @@ export default function DashboardScreen() {
           </View>
 
           <View className="flex-row items-center flex-wrap mt-2" style={{ gap: 8 }}>
-            <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
-              Bem-vindo ao Mauá Core
+            <Text
+              className="text-xs uppercase"
+              style={{ color: colors.accent, fontWeight: '700', letterSpacing: 1.5 }}
+            >
+              Clube da Manga
             </Text>
             <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
               <Text className="text-[10px] font-bold" style={{ color: colors.accent }}>
@@ -216,7 +230,9 @@ export default function DashboardScreen() {
             feedResumo
               ? feedResumo.total === 0
                 ? 'Nenhuma publicação ainda'
-                : `${feedResumo.total} publicação${feedResumo.total !== 1 ? 'ões' : ''} recentes`
+                : feedResumo.total === 1
+                  ? '1 publicação recente'
+                  : `${feedResumo.total} publicações recentes`
               : 'Avisos e publicações da bateria'
           }
           onPress={() => router.push('/(painel)/feed')}

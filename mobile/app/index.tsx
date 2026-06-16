@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { useResponsive } from '../utils/responsive';
+import { tituloMarca } from '../theme/typography';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -14,28 +15,27 @@ export default function WelcomeScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <View className="flex-1 justify-between pb-16" style={{ paddingHorizontal: screenPadding, paddingTop: 24 }}>
         <View className="flex-1 justify-center items-center">
-          <View
-            className="w-24 h-24 rounded-3xl items-center justify-center mb-6"
-            style={{ backgroundColor: colors.accentSoft }}
-          >
-            <Text style={{ fontSize: 48 }}>🥭</Text>
-          </View>
+          <Image
+            source={require('../assets/images/logo-bateria-maua.png')}
+            style={{ width: 200, height: 200, marginBottom: 20 }}
+            resizeMode="contain"
+          />
           <Text
-            className="text-4xl font-black text-center"
-            style={{ color: colors.accent, letterSpacing: 2 }}
+            className="text-5xl text-center"
+            style={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: -0.5 }}
           >
-            BATERIA MAUÁ
+            {tituloMarca('Bateria Mauá')}
           </Text>
           <Text
-            className="text-base font-bold text-center mt-2"
-            style={{ color: colors.textSecondary, letterSpacing: 4 }}
+            className="text-sm font-bold text-center mt-2 uppercase"
+            style={{ color: colors.accent, letterSpacing: 4 }}
           >
-            CLUBE DA MANGA
+            Clube da Manga
           </Text>
 
           <View className="flex-row items-center mt-5">
-            <View className="h-1 w-6 rounded-full" style={{ backgroundColor: colors.accent }} />
-            <View className="h-1 w-6 rounded-full mx-1" style={{ backgroundColor: colors.gold }} />
+            <View className="h-1 w-6 rounded-full" style={{ backgroundColor: colors.accentLight }} />
+            <View className="h-1 w-6 rounded-full mx-1" style={{ backgroundColor: colors.accent }} />
             <View className="h-1 w-6 rounded-full" style={{ backgroundColor: colors.success }} />
           </View>
         </View>
