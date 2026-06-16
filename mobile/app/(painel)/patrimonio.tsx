@@ -3,7 +3,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -15,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
+import { ThemeColors } from '../../theme/colors';
 import { useResponsive } from '../../utils/responsive';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
@@ -179,8 +182,8 @@ export default function PatrimonioScreen() {
       } else {
         const novo: ItemPatrimonio = { id: `tmp-${Date.now()}`, ...form };
         setItens((lista) => [novo, ...lista]);
-        setCategoriaAtiva(form.categoria);
       }
+      setCategoriaAtiva(form.categoria);
       setModalVisivel(false);
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Não foi possível salvar.');
@@ -427,7 +430,11 @@ export default function PatrimonioScreen() {
       </ScrollView>
 
       <Modal visible={modalVisivel} animationType="slide" transparent onRequestClose={() => setModalVisivel(false)}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+        <KeyboardAvoidingView
+          className="flex-1 justify-end"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ backgroundColor: colors.overlay }}
+        >
           <View
             className="rounded-t-3xl"
             style={{ backgroundColor: colors.background, maxHeight: '92%', borderTopWidth: 1, borderColor: colors.border }}
@@ -537,13 +544,13 @@ export default function PatrimonioScreen() {
               )}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
 }
 
-function Rotulo({ texto, colors }: { texto: string; colors: any }) {
+function Rotulo({ texto, colors }: { texto: string; colors: ThemeColors }) {
   return (
     <Text className="text-xs font-bold mb-2 ml-1" style={{ color: colors.textSecondary }}>
       {texto}
@@ -563,7 +570,7 @@ function CampoTexto({
   valor: string;
   onChange: (t: string) => void;
   placeholder?: string;
-  colors: any;
+  colors: ThemeColors;
   multiline?: boolean;
 }) {
   return (
@@ -583,7 +590,7 @@ function CampoTexto({
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         value={valor}
-        onChange={(e) => onChange(e.nativeEvent.text)}
+        onChangeText={onChange}
         multiline={multiline}
       />
     </View>
