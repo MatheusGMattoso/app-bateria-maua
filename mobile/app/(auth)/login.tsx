@@ -36,6 +36,7 @@ export default function LoginScreen() {
         body: JSON.stringify({ email, senha }),
       });
 
+      await AsyncStorage.setItem('token', dados.token);
       await AsyncStorage.setItem('usuario', JSON.stringify(dados.usuario));
       router.replace('/(painel)');
     } catch (error: any) {
