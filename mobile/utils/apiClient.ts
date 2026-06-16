@@ -5,6 +5,9 @@
 const MENSAGEM_SERVIDOR_INDISPONIVEL =
   'Servidor indisponível. Verifique se o backend está rodando e tente novamente.';
 
+const MENSAGEM_BACKEND_DESATUALIZADO =
+  'Backend desatualizado. Pare o servidor e reinicie com: cd backend && npm start';
+
 export class ApiError extends Error {
   status: number;
 
@@ -24,6 +27,9 @@ export async function parseJsonResponse<T = any>(resposta: Response): Promise<T>
   const contentType = resposta.headers.get('content-type') || '';
 
   if (!contentType.includes('application/json')) {
+    if (resposta.status === 404) {
+      throw new ApiError(MENSAGEM_BACKEND_DESATUALIZADO, resposta.status);
+    }
     throw new ApiError(MENSAGEM_SERVIDOR_INDISPONIVEL, resposta.status);
   }
 
