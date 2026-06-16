@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const supabaseAdmin = require('../config/supabaseAdmin');
 const fs = require('fs');
 const path = require('path');
 
@@ -391,16 +392,24 @@ async function uploadImagem({ buffer, mimeType, nomeArquivo, baseUrl }) {
   const extensao = mimeType?.includes('png') ? 'png' : mimeType?.includes('webp') ? 'webp' : 'jpg';
   const caminho = `${Date.now()}_${nomeArquivo || 'imagem'}.${extensao}`;
 
-  const { error } = await supabase.storage
+  // Usa o client com service_role para o upload (ignora RLS do Storage).
+  // Cai para o client padrao apenas se a service key nao estiver configurada.
+  const client = supabaseAdmin || supabase;
+  const { error } = await client.storage
     .from(BUCKET_IMAGENS)
     .upload(caminho, buffer, { contentType: mimeType || 'image/jpeg', upsert: false });
 
   if (!error) {
-    const { data: urlData } = supabase.storage.from(BUCKET_IMAGENS).getPublicUrl(caminho);
+    const { data: urlData } = client.storage.from(BUCKET_IMAGENS).getPublicUrl(caminho);
     return { imagem_url: urlData.publicUrl };
   }
 
-  console.warn('Supabase Storage indisponivel, usando armazenamento local:', error.message);
+  // Fallback local: a URL aponta para o IP de quem subiu o servidor, entao
+  // so funciona na mesma rede. Mantido apenas como ultimo recurso.
+  console.warn(
+    'Supabase Storage indisponivel, usando armazenamento local (visivel so na rede local):',
+    error.message,
+  );
   const arquivoLocal = salvarImagemLocal({ buffer, mimeType, nomeArquivo });
   const host = baseUrl || 'http://localhost:3000';
   return { imagem_url: `${host}/uploads/feed/${arquivoLocal}` };
