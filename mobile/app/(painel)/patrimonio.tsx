@@ -16,9 +16,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { BASE_URL } from '../../config/api';
+import { fetchJson } from '../../utils/apiClient';
 import { useTheme } from '../../context/ThemeContext';
-import { ThemeColors } from '../../theme/colors';
 import { useResponsive } from '../../utils/responsive';
+import { ThemeColors } from '../../theme/colors';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -35,11 +37,16 @@ type ItemPatrimonio = {
   codigo_patrimonio?: string;
   estado_conservacao: Estado;
   status: Status;
+  responsavel_id?: string | null;
   responsavel_nome?: string | null;
   localizacao?: string;
   observacoes?: string;
   foto_url?: string | null;
 };
+
+type Membro = { id: string; nome: string };
+
+type FotoNova = { uri: string; base64: string; mimeType: string };
 
 const CATEGORIAS: { key: Categoria; label: string; icon: string }[] = [
   { key: 'Instrumento', label: 'Instrumentos', icon: '🥁' },
@@ -53,22 +60,14 @@ const STATUS_LISTA: Status[] = ['Disponível', 'Em uso', 'Manutenção', 'Empres
 const iconePorCategoria = (categoria: Categoria) =>
   CATEGORIAS.find((c) => c.key === categoria)?.icon || '📦';
 
-const DADOS_EXEMPLO: ItemPatrimonio[] = [
-  { id: '1', nome: 'Surdo de 1ª #03', categoria: 'Instrumento', codigo_patrimonio: 'INST-003', estado_conservacao: 'Bom', status: 'Disponível', responsavel_nome: 'João Pereira', localizacao: 'Sala da bateria' },
-  { id: '2', nome: 'Caixa #11', categoria: 'Instrumento', codigo_patrimonio: 'INST-011', estado_conservacao: 'Regular', status: 'Manutenção', localizacao: 'Oficina' },
-  { id: '3', nome: 'Repique #07', categoria: 'Instrumento', codigo_patrimonio: 'INST-007', estado_conservacao: 'Novo', status: 'Em uso', responsavel_nome: 'Maria Souza' },
-  { id: '4', nome: 'Abadá Azul (G)', categoria: 'Uniforme', codigo_patrimonio: 'UNI-022', estado_conservacao: 'Bom', status: 'Emprestado', responsavel_nome: 'Carlos Lima' },
-  { id: '5', nome: 'Camiseta Ensaio (M)', categoria: 'Uniforme', estado_conservacao: 'Novo', status: 'Disponível' },
-  { id: '6', nome: 'Talabarte ajustável', categoria: 'Equipamento', codigo_patrimonio: 'EQP-014', estado_conservacao: 'Bom', status: 'Disponível', localizacao: 'Sala da bateria' },
-  { id: '7', nome: 'Carrinho de transporte', categoria: 'Equipamento', estado_conservacao: 'Danificado', status: 'Baixado', observacoes: 'Roda quebrada' },
-];
-
 type FormState = {
   nome: string;
   categoria: Categoria;
   codigo_patrimonio: string;
   estado_conservacao: Estado;
   status: Status;
+  responsavel_id: string | null;
+  responsavel_nome: string | null;
   localizacao: string;
   observacoes: string;
   foto_url: string | null;
@@ -80,6 +79,8 @@ const formVazio = (categoria: Categoria): FormState => ({
   codigo_patrimonio: '',
   estado_conservacao: 'Bom',
   status: 'Disponível',
+  responsavel_id: null,
+  responsavel_nome: null,
   localizacao: '',
   observacoes: '',
   foto_url: null,
@@ -90,6 +91,7 @@ export default function PatrimonioScreen() {
   const { screenPadding, isSmall } = useResponsive();
 
   const [itens, setItens] = useState<ItemPatrimonio[]>([]);
+  const [membros, setMembros] = useState<Membro[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busca, setBusca] = useState('');
@@ -97,17 +99,26 @@ export default function PatrimonioScreen() {
   const [usuario, setUsuario] = useState<any>(null);
 
   const [modalVisivel, setModalVisivel] = useState(false);
+  const [pickerResponsavelVisivel, setPickerResponsavelVisivel] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(formVazio('Instrumento'));
+  const [fotoNova, setFotoNova] = useState<FotoNova | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   const ehGestor =
     usuario?.perfil_acesso === 'Administrador' || usuario?.perfil_acesso === 'Gestor de Módulo';
+  const ehAdministrador = usuario?.perfil_acesso === 'Administrador';
 
   useEffect(() => {
     (async () => {
       const usuarioStorage = await AsyncStorage.getItem('usuario');
-      if (usuarioStorage) setUsuario(JSON.parse(usuarioStorage));
+      if (usuarioStorage) {
+        const u = JSON.parse(usuarioStorage);
+        setUsuario(u);
+        if (u?.perfil_acesso === 'Administrador' || u?.perfil_acesso === 'Gestor de Módulo') {
+          carregarMembros();
+        }
+      }
     })();
     carregarItens();
   }, []);
@@ -115,11 +126,21 @@ export default function PatrimonioScreen() {
   const carregarItens = async () => {
     try {
       setCarregando(true);
-      setItens(DADOS_EXEMPLO);
+      const dados = await fetchJson(`${BASE_URL}/patrimonio`);
+      setItens(dados.itens || []);
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Não foi possível carregar o patrimônio.');
     } finally {
       setCarregando(false);
+    }
+  };
+
+  const carregarMembros = async () => {
+    try {
+      const dados = await fetchJson(`${BASE_URL}/membros`);
+      setMembros(dados.membros || []);
+    } catch {
+      setMembros([]);
     }
   };
 
@@ -140,16 +161,19 @@ export default function PatrimonioScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.55,
+      base64: true,
     });
 
-    if (!resultado.canceled && resultado.assets[0]) {
-      setForm((f) => ({ ...f, foto_url: resultado.assets[0].uri }));
+    const asset = resultado.assets?.[0];
+    if (!resultado.canceled && asset?.base64) {
+      setFotoNova({ uri: asset.uri, base64: asset.base64, mimeType: asset.mimeType || 'image/jpeg' });
     }
   };
 
   const abrirNovo = () => {
     setEditandoId(null);
     setForm(formVazio(categoriaAtiva));
+    setFotoNova(null);
     setModalVisivel(true);
   };
 
@@ -162,11 +186,23 @@ export default function PatrimonioScreen() {
       codigo_patrimonio: item.codigo_patrimonio || '',
       estado_conservacao: item.estado_conservacao,
       status: item.status,
+      responsavel_id: item.responsavel_id || null,
+      responsavel_nome: item.responsavel_nome || null,
       localizacao: item.localizacao || '',
       observacoes: item.observacoes || '',
       foto_url: item.foto_url || null,
     });
+    setFotoNova(null);
     setModalVisivel(true);
+  };
+
+  const selecionarResponsavel = (membro: Membro | null) => {
+    setForm((f) => ({
+      ...f,
+      responsavel_id: membro?.id || null,
+      responsavel_nome: membro?.nome || null,
+    }));
+    setPickerResponsavelVisivel(false);
   };
 
   const salvarItem = async () => {
@@ -177,14 +213,50 @@ export default function PatrimonioScreen() {
 
     try {
       setSalvando(true);
-      if (editandoId) {
-        setItens((lista) => lista.map((i) => (i.id === editandoId ? { ...i, ...form } : i)));
-      } else {
-        const novo: ItemPatrimonio = { id: `tmp-${Date.now()}`, ...form };
-        setItens((lista) => [novo, ...lista]);
+
+      let fotoUrl = form.foto_url;
+      if (fotoNova) {
+        const upload = await fetchJson(`${BASE_URL}/patrimonio/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imagem_base64: fotoNova.base64,
+            mime_type: fotoNova.mimeType,
+            nome_arquivo: 'patrimonio',
+          }),
+        });
+        fotoUrl = upload.imagem_url;
       }
+
+      const payload = {
+        nome: form.nome.trim(),
+        categoria: form.categoria,
+        codigo_patrimonio: form.codigo_patrimonio.trim() || null,
+        estado_conservacao: form.estado_conservacao,
+        status: form.status,
+        responsavel_id: form.responsavel_id,
+        localizacao: form.localizacao.trim() || null,
+        observacoes: form.observacoes.trim() || null,
+        foto_url: fotoUrl,
+      };
+
+      if (editandoId) {
+        await fetchJson(`${BASE_URL}/patrimonio/${editandoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await fetchJson(`${BASE_URL}/patrimonio`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
       setCategoriaAtiva(form.categoria);
       setModalVisivel(false);
+      await carregarItens();
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Não foi possível salvar.');
     } finally {
@@ -199,9 +271,14 @@ export default function PatrimonioScreen() {
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: () => {
-          setItens((lista) => lista.filter((i) => i.id !== editandoId));
-          setModalVisivel(false);
+        onPress: async () => {
+          try {
+            await fetchJson(`${BASE_URL}/patrimonio/${editandoId}`, { method: 'DELETE' });
+            setModalVisivel(false);
+            await carregarItens();
+          } catch (error: any) {
+            Alert.alert('Erro', error.message || 'Não foi possível excluir.');
+          }
         },
       },
     ]);
@@ -250,6 +327,8 @@ export default function PatrimonioScreen() {
     shadowRadius: 4,
     elevation: 2,
   };
+
+  const previewFoto = fotoNova?.uri || form.foto_url;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -457,8 +536,8 @@ export default function PatrimonioScreen() {
                 className="rounded-2xl items-center justify-center mb-4 overflow-hidden"
                 style={{ height: 150, backgroundColor: colors.cardAlt, borderWidth: 1, borderColor: colors.border }}
               >
-                {form.foto_url ? (
-                  <Image source={{ uri: form.foto_url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                {previewFoto ? (
+                  <Image source={{ uri: previewFoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                 ) : (
                   <>
                     <Text style={{ fontSize: 28 }}>📷</Text>
@@ -491,6 +570,18 @@ export default function PatrimonioScreen() {
               </View>
 
               <CampoTexto rotulo="Código de patrimônio" valor={form.codigo_patrimonio} onChange={(t) => setForm((f) => ({ ...f, codigo_patrimonio: t }))} placeholder="Ex.: INST-003" colors={colors} />
+
+              <Rotulo texto="Responsável" colors={colors} />
+              <TouchableOpacity
+                onPress={() => setPickerResponsavelVisivel(true)}
+                className="rounded-xl px-4 mb-4 flex-row items-center justify-between"
+                style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, height: 46 }}
+              >
+                <Text className="text-sm" style={{ color: form.responsavel_nome ? colors.textPrimary : colors.textMuted }}>
+                  {form.responsavel_nome || 'Ninguém'}
+                </Text>
+                <Text style={{ color: colors.textSecondary }}>⌄</Text>
+              </TouchableOpacity>
 
               <Rotulo texto="Estado de conservação" colors={colors} />
               <View className="flex-row flex-wrap mb-4" style={{ gap: 8 }}>
@@ -535,7 +626,7 @@ export default function PatrimonioScreen() {
 
               <LoadingButton label={editandoId ? 'Salvar alterações' : 'Cadastrar item'} onPress={salvarItem} loading={salvando} />
 
-              {editandoId && (
+              {editandoId && ehAdministrador && (
                 <TouchableOpacity onPress={excluirItem} className="items-center mt-3 py-2">
                   <Text className="text-sm font-bold" style={{ color: colors.danger }}>
                     Excluir item
@@ -545,6 +636,49 @@ export default function PatrimonioScreen() {
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={pickerResponsavelVisivel} animationType="slide" transparent onRequestClose={() => setPickerResponsavelVisivel(false)}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+          <View
+            className="rounded-t-3xl"
+            style={{ backgroundColor: colors.background, maxHeight: '70%', borderTopWidth: 1, borderColor: colors.border }}
+          >
+            <View className="flex-row items-center justify-between px-6 pt-6 pb-3">
+              <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+                Responsável
+              </Text>
+              <TouchableOpacity onPress={() => setPickerResponsavelVisivel(false)}>
+                <Text className="text-xl" style={{ color: colors.textSecondary }}>
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+              <TouchableOpacity
+                onPress={() => selecionarResponsavel(null)}
+                className="py-3 border-b"
+                style={{ borderColor: colors.border }}
+              >
+                <Text className="text-sm font-semibold" style={{ color: colors.textMuted }}>
+                  Ninguém
+                </Text>
+              </TouchableOpacity>
+              {membros.map((m) => (
+                <TouchableOpacity
+                  key={m.id}
+                  onPress={() => selecionarResponsavel(m)}
+                  className="py-3 border-b"
+                  style={{ borderColor: colors.border }}
+                >
+                  <Text className="text-sm" style={{ color: form.responsavel_id === m.id ? colors.accent : colors.textPrimary }}>
+                    {m.nome}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
