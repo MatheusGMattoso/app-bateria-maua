@@ -23,7 +23,6 @@ import { useResponsive } from '../../utils/responsive';
 import { ThemeColors } from '../../theme/colors';
 import ScreenHeader from '../../components/ScreenHeader';
 import EmptyState from '../../components/EmptyState';
-import ThemeToggle from '../../components/ThemeToggle';
 import LoadingButton from '../../components/LoadingButton';
 
 type Categoria = 'Instrumento' | 'Uniforme' | 'Equipamento';
@@ -343,7 +342,6 @@ export default function PatrimonioScreen() {
           title="Patrimônio"
           subtitle="Bens, instrumentos e uniformes da bateria."
           hint={ehGestor ? 'Toque em um item para editar ou em “Adicionar” para cadastrar.' : undefined}
-          right={<ThemeToggle />}
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4" contentContainerStyle={{ gap: 8 }}>

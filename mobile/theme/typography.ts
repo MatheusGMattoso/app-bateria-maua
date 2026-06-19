@@ -74,7 +74,7 @@ export function applyBrandTypography() {
     const fontFamily = familyForWeight(estilo.fontWeight);
 
     return React.cloneElement(elemento, {
-      style: [{ fontFamily }, elemento.props.style, { fontWeight: undefined }],
+      style: StyleSheet.flatten([{ fontFamily }, elemento.props.style, { fontWeight: undefined }]),
     });
   };
 }
