@@ -16,9 +16,8 @@ import Constants from 'expo-constants';
 //                                         Presença.
 // =============================================================================
 
-// Mude para 'true' para o app usar o servidor na nuvem (Render)
-// Mude para 'false' para o app usar o seu notebook (Desenvolvimento Local)
-const USAR_NUVEM = false;
+// Detecta automaticamente se está rodando em produção (Vercel/Render) ou no seu PC
+const USAR_NUVEM = process.env.NODE_ENV === 'production';
 
 const URL_PRODUCAO = 'https://app-bateria-maua.onrender.com/api';
 
