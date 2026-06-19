@@ -22,6 +22,7 @@ import LevelProgressCard from '../../../components/LevelProgressCard';
 import AchievementBadge from '../../../components/AchievementBadge';
 import PresenceHistoryList from '../../../components/PresenceHistoryList';
 import ProfileEditSheet from '../../../components/ProfileEditSheet';
+import HierarchyEditSheet from '../../../components/HierarchyEditSheet';
 
 export default function PerfilRitmistaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,9 +36,11 @@ export default function PerfilRitmistaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [erro, setErro] = useState('');
   const [editando, setEditando] = useState(false);
+  const [editandoHierarquia, setEditandoHierarquia] = useState(false);
 
   const membroId = Array.isArray(id) ? id[0] : id;
   const ehProprioPerfil = usuario?.id === membroId;
+  const ehAdministrador = usuario?.perfil_acesso === 'Administrador';
 
   const carregar = useCallback(async () => {
     if (!membroId) return;
@@ -69,6 +72,10 @@ export default function PerfilRitmistaScreen() {
     setRefreshing(true);
     await carregar();
     setRefreshing(false);
+  };
+
+  const handleHierarquiaSalva = (novoNivel: string) => {
+    setPerfil((atual) => (atual ? { ...atual, membro: { ...atual.membro, perfil_acesso: novoNivel } } : atual));
   };
 
   const handlePerfilSalvo = async (membroAtualizado: PerfilCompleto['membro']) => {
@@ -170,6 +177,16 @@ export default function PerfilRitmistaScreen() {
                     Editar perfil
                   </Text>
                 </TouchableOpacity>
+              ) : ehAdministrador ? (
+                <TouchableOpacity
+                  className="mt-4 px-4 py-2 rounded-xl"
+                  style={{ backgroundColor: colors.accent }}
+                  onPress={() => setEditandoHierarquia(true)}
+                >
+                  <Text className="text-xs font-bold" style={{ color: colors.onAccent }}>
+                    Editar
+                  </Text>
+                </TouchableOpacity>
               ) : null}
             </View>
 
@@ -252,6 +269,15 @@ export default function PerfilRitmistaScreen() {
           solicitanteId={usuario.id}
           onClose={() => setEditando(false)}
           onSalvo={handlePerfilSalvo}
+        />
+      ) : null}
+
+      {perfil && !ehProprioPerfil && ehAdministrador ? (
+        <HierarchyEditSheet
+          visible={editandoHierarquia}
+          membro={perfil.membro}
+          onClose={() => setEditandoHierarquia(false)}
+          onSalvo={handleHierarquiaSalva}
         />
       ) : null}
     </SafeAreaView>
