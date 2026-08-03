@@ -59,7 +59,7 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   console.log('Rotas de perfil: GET /api/membros/:id/perfil-completo');
 });

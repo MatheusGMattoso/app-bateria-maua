@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-const URL_PRODUCAO = 'https://app-bateria-maua.onrender.com/api';
+const URL_PRODUCAO = 'http://147.15.103.111:3000/api';
 
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const envHost = process.env.EXPO_PUBLIC_API_HOST;
