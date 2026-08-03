@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-const URL_PRODUCAO = 'https://app-bateria-maua.duckdns.org';
+const URL_PRODUCAO = 'https://app-bateria-maua.duckdns.org/api';
 
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const envHost = process.env.EXPO_PUBLIC_API_HOST;
